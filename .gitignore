@@ -1,1 +1,9 @@
-/Theories
+# qmake / build
+Makefile
+.qmake.stash
+*.o
+moc_*
+pacman
+pacman.app/
+build/
+.DS_Store
