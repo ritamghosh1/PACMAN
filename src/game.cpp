@@ -152,7 +152,9 @@ Dir Game::pacDecide(Entity& e) {
 QPoint Game::ghostTarget(const Ghost& g) const {
     int pr = dy(pac_.facing), pc = dx(pac_.facing);
     QPoint aim(pac_.tc + pc * predictive_, pac_.tr + pr * predictive_);
-    if (!chase_) return g.corner;
+    int dotsLeft = static_cast<int>(maze_.dots().size() + maze_.pellets().size());
+    bool elroyActive = (g.id == 0 && dotsLeft <= 20);
+    if (!chase_ && !elroyActive) return g.corner;
     switch (g.id) {
         case 1: return aim + QPoint(pc, pr) * 4;
         case 2: {
@@ -326,15 +328,27 @@ void Game::updatePlaying(double dt) {
         }
     }
 
+    int dotsLeft = static_cast<int>(maze_.dots().size() + maze_.pellets().size());
     for (auto& g : ghosts_) {
         if (g.st == Ghost::St::House) {
             g.houseT -= float(dt);
             if (g.houseT <= 0.f) g.st = Ghost::St::Exiting;
             continue;
         }
-        if (g.st == Ghost::St::Eyes) g.speed = ghostSpeed_ * 2.2;
-        else if (g.st == Ghost::St::Frightened) g.speed = ghostSpeed_ * 0.55;
-        else g.speed = ghostSpeed_;
+        if (g.st == Ghost::St::Eyes) {
+            g.speed = ghostSpeed_ * 2.2;
+        } else if (g.st == Ghost::St::Frightened) {
+            g.speed = ghostSpeed_ * 0.55;
+        } else {
+            // Blinky Cruise Elroy speed scaling as dots are eaten
+            if (g.id == 0) {
+                if (dotsLeft <= 10) g.speed = ghostSpeed_ * 1.22;       // Elroy 2: faster than Pac-Man!
+                else if (dotsLeft <= 20) g.speed = ghostSpeed_ * 1.10;  // Elroy 1: matching Pac-Man!
+                else g.speed = ghostSpeed_;
+            } else {
+                g.speed = ghostSpeed_;
+            }
+        }
         advance(g, dt,
                 [this, &g](int r, int c) { return ghostPass(g, r, c); },
                 [this](Entity& e) { return ghostDecide(e); });
@@ -364,8 +378,22 @@ void Game::updatePlaying(double dt) {
 
     if (maze_.empty()) {
         st_ = S::Won;
-        stateT_ = 1.8;
+        stateT_ = 1.2;
     }
+}
+
+void Game::startNextLevel() {
+    sound_.stopAll();
+    level_++;
+    applyTuning();
+    maze_.reset();
+    resetActors();
+    dotsEatenCount_ = 0;
+    fruitActive_ = false;
+    popups_.clear();
+    st_ = S::Ready;
+    stateT_ = 4.2;
+    sound_.playIntro();
 }
 
 void Game::tick() {
@@ -413,15 +441,20 @@ void Game::tick() {
         case S::Won:
             stateT_ -= dt;
             if (stateT_ <= 0.0) {
-                level_++;
-                applyTuning();
-                maze_.reset();
-                resetActors();
-                dotsEatenCount_ = 0;
-                fruitActive_ = false;
-                st_ = S::Ready;
-                stateT_ = 4.2;
-                sound_.playIntro();
+                // Play intermission after level 1, level 2, or every 3 levels
+                if (level_ == 1 || level_ == 2 || level_ % 3 == 0) {
+                    st_ = S::Intermission;
+                    stateT_ = 5.6;
+                    sound_.playIntermission();
+                } else {
+                    startNextLevel();
+                }
+            }
+            break;
+        case S::Intermission:
+            stateT_ -= dt;
+            if (stateT_ <= 0.0) {
+                startNextLevel();
             }
             break;
         case S::Over:
@@ -448,6 +481,14 @@ void Game::keyPressEvent(QKeyEvent* e) {
         case Qt::Key_D:
             pac_.want = Dir::Right;
             break;
+        case Qt::Key_Space:
+        case Qt::Key_Return:
+        case Qt::Key_Enter:
+            if (st_ == S::Intermission) {
+                startNextLevel();
+                return;
+            }
+            break;
         case Qt::Key_M:
             sound_.toggleMute();
             break;
@@ -467,7 +508,11 @@ void Game::keyPressEvent(QKeyEvent* e) {
 }
 
 void Game::paintEvent(QPaintEvent*) {
-    renderScene();
+    if (st_ == S::Intermission) {
+        renderIntermission();
+    } else {
+        renderScene();
+    }
     QPainter p(this);
     p.setRenderHint(QPainter::SmoothPixmapTransform, false);
     p.drawImage(rect(), buffer_);
@@ -612,5 +657,59 @@ void Game::renderScene() {
     } else if (st_ == S::Over) {
         pixel::drawText(buffer_, 50, yOff + 17 * 5 - 4, QStringLiteral("GAME OVER"), QColor(255, 0, 0));
         pixel::drawText(buffer_, 54, yOff + 19 * 5 - 2, QStringLiteral("PRESS R"), QColor(255, 255, 255));
+    }
+}
+
+void Game::renderIntermission() {
+    buffer_.fill(qRgb(0, 0, 0));
+
+    // 1. Top HUD
+    pixel::drawText(buffer_, 4, 2, QStringLiteral("1UP"), QColor(255, 255, 255));
+    pixel::drawText(buffer_, 4, 8, QString("%1").arg(score_, 6, 10, QChar('0')), QColor(255, 255, 255));
+    pixel::drawText(buffer_, 48, 2, QStringLiteral("HIGH SCORE"), QColor(255, 255, 255));
+    pixel::drawText(buffer_, 60, 8, QString("%1").arg(highScore_, 6, 10, QChar('0')), QColor(255, 255, 255));
+
+    // 2. Stage Floor Line
+    int floorY = 106;
+    QRgb stageLine = qRgb(33, 33, 222);
+    for (int x = 6; x < cfg::kW - 6; x++) {
+        pixel::setPixelSafe(buffer_, x, floorY, stageLine);
+    }
+
+    // Act Banner & Skip Tip
+    pixel::drawText(buffer_, 54, 122, QStringLiteral("ACT 1"), QColor(255, 255, 0));
+    pixel::drawText(buffer_, 38, 134, QStringLiteral("INTERMISSION"), QColor(0, 255, 255));
+    pixel::drawText(buffer_, 26, 152, QStringLiteral("PRESS SPACE TO SKIP"), QColor(130, 130, 130));
+
+    // 3. Animation Timeline (5.6s total)
+    float elapsed = 5.6f - static_cast<float>(stateT_);
+    int standardY = 102; // Sprite bottom is at 102 + 3 = 105, directly above floor line 106
+
+    if (elapsed < 2.6f) {
+        // Part 1: Pac-Man running leftward, chased by Blinky
+        float progress = elapsed / 2.5f;
+        int px = static_cast<int>(155.0f - progress * 195.0f);
+        int mCycle = static_cast<int>(animT_ * 14.0) % 4;
+        pixel::drawPacman(buffer_, px, standardY, Dir::Left, (mCycle == 3 ? 1 : mCycle), QColor(255, 255, 0), 1);
+
+        // Blinky chasing 24px behind
+        int gx = px + 24;
+        int gFrame = static_cast<int>(animT_ / 0.12) % 2;
+        pixel::drawGhost(buffer_, gx, standardY, Dir::Left, gFrame, kGhostCol[0], false, false, false);
+    } else {
+        // Part 2: Giant Pac-Man chasing frightened Blinky rightward!
+        float elapsed2 = elapsed - 2.6f;
+        float progress2 = elapsed2 / 2.8f;
+
+        // Frightened Blinky scrambling from left to right (-25 to 175)
+        int gx = static_cast<int>(-25.0f + progress2 * 200.0f);
+        int gFrame = static_cast<int>(animT_ / 0.10) % 2;
+        pixel::drawGhost(buffer_, gx, standardY, Dir::Right, gFrame, QColor(33, 33, 222), true, false, false);
+
+        // GIANT PAC-MAN (3x scale = 21x21 px)
+        // With scale 3, radius is 9. Center at Y = 96 has bottom at 96 + 9 = 105 (aligns with floor 106!)
+        int gpx = gx - 36;
+        int mCycle = static_cast<int>(animT_ * 12.0) % 4;
+        pixel::drawPacman(buffer_, gpx, 96, Dir::Right, (mCycle == 3 ? 1 : mCycle), QColor(255, 255, 0), 3);
     }
 }

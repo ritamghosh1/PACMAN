@@ -20,7 +20,7 @@ protected:
     void keyPressEvent(QKeyEvent* e) override;
 
 private:
-    enum class S { Ready, Playing, Dying, Won, Over };
+    enum class S { Ready, Playing, Dying, Won, Intermission, Over };
 
     struct ScorePopup {
         int x;
@@ -37,8 +37,9 @@ private:
     void triggerFright();
     void advanceMode();
     void addScore(int n);
-    void spawnFruit();
+    void startNextLevel();
     void renderScene();
+    void renderIntermission();
 
     bool ghostPass(const Ghost& g, int r, int c) const;
     Dir pacDecide(Entity& e);

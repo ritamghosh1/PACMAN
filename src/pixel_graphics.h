@@ -85,10 +85,10 @@ inline void drawText(QImage& img, int startX, int startY, const QString& text, c
 
 // 7x7 Pac-Man Sprite Matrices
 // 0 = closed, 1 = half open, 2 = wide open
-inline void drawPacman(QImage& img, int cx, int cy, Dir dir, int frame, const QColor& color) {
+inline void drawPacman(QImage& img, int cx, int cy, Dir dir, int frame, const QColor& color, int pixelSize = 1) {
     QRgb rgb = color.rgba();
-    int x0 = cx - 3;
-    int y0 = cy - 3;
+    int x0 = cx - 3 * pixelSize;
+    int y0 = cy - 3 * pixelSize;
 
     // Base 7x7 matrices for Facing Right
     static const char* kClosed[7] = {
@@ -138,7 +138,15 @@ inline void drawPacman(QImage& img, int cx, int cy, Dir dir, int frame, const QC
                 }
             }
             if (baseSprite[srcR][srcC] == '#') {
-                setPixelSafe(img, x0 + c, y0 + r, rgb);
+                if (pixelSize == 1) {
+                    setPixelSafe(img, x0 + c, y0 + r, rgb);
+                } else {
+                    for (int pr = 0; pr < pixelSize; pr++) {
+                        for (int pc = 0; pc < pixelSize; pc++) {
+                            setPixelSafe(img, x0 + c * pixelSize + pc, y0 + r * pixelSize + pr, rgb);
+                        }
+                    }
+                }
             }
         }
     }

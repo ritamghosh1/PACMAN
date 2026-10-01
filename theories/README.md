@@ -12,6 +12,12 @@ with new `.md` files as ideas evolve — one theory per file, keep them short.
 - [05-scoring-and-lives.md](05-scoring-and-lives.md) — points, lives, extra life
 - [06-rendering.md](06-rendering.md) — pixelated rendering, scale factor, colors
 
+## Upgrades & Advanced Mechanics
+
+- [upgrades/README.md](upgrades/README.md) — Upgrades documentation index
+- [upgrades/01-cruise-elroy.md](upgrades/01-cruise-elroy.md) — Dynamic ghost speed scaling & Cruise Elroy
+- [upgrades/02-intermission-cutscene.md](upgrades/02-intermission-cutscene.md) — Intermission animation system & Giant Pac-Man
+
 ## Game logic
 
 - [game-logic/core-loop.md](game-logic/core-loop.md) — per-frame update order & state machine

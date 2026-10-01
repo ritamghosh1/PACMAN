@@ -17,6 +17,7 @@ public:
     void playEatGhost();
     void playDeath();
     void playFruit();
+    void playIntermission();
     void stopAll();
 
     void toggleMute();
@@ -33,6 +34,7 @@ private:
     QSoundEffect sndEatGhost_;
     QSoundEffect sndDeath_;
     QSoundEffect sndFruit_;
+    QSoundEffect sndIntermission_;
 
     bool muted_ = false;
     bool wakaFlip_ = false;

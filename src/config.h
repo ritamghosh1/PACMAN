@@ -28,9 +28,9 @@ inline Level level(int n) {
     if (n < 1) n = 1;
     Level L;
     L.pacSpeed = std::min(8.5, 7.0 + 0.15 * (n - 1));
-    L.ghostSpeed = std::min(9.0, 5.5 + 0.40 * (n - 1));
-    L.frightSecs = std::max(2.0, 6.0 - 0.6 * (n - 1));
-    L.releaseBase = std::max(0.6, 1.6 * std::pow(0.75, n - 1));
+    L.ghostSpeed = std::min(9.5, 6.4 + 0.45 * (n - 1));
+    L.frightSecs = std::max(1.5, 6.0 - 0.6 * (n - 1));
+    L.releaseBase = std::max(0.5, 1.6 * std::pow(0.75, n - 1));
     L.predictive = std::min(3, std::max(0, n - 2));
     return L;
 }

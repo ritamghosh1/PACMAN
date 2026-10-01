@@ -10,6 +10,7 @@ SoundManager::SoundManager(QObject* parent) : QObject(parent) {
     initEffect(sndEatGhost_, QStringLiteral("pacman_eat_ghost.wav"), 0.8f);
     initEffect(sndDeath_, QStringLiteral("pacman_death.wav"), 0.85f);
     initEffect(sndFruit_, QStringLiteral("pacman_fruit.wav"), 0.8f);
+    initEffect(sndIntermission_, QStringLiteral("pacman_intermission.wav"), 0.85f);
 }
 
 QString SoundManager::findSoundFile(const QString& filename) const {
@@ -75,6 +76,12 @@ void SoundManager::playFruit() {
     sndFruit_.play();
 }
 
+void SoundManager::playIntermission() {
+    if (muted_) return;
+    stopAll();
+    sndIntermission_.play();
+}
+
 void SoundManager::stopAll() {
     sndIntro_.stop();
     sndWaka1_.stop();
@@ -82,6 +89,7 @@ void SoundManager::stopAll() {
     sndEatGhost_.stop();
     sndDeath_.stop();
     sndFruit_.stop();
+    sndIntermission_.stop();
 }
 
 void SoundManager::toggleMute() {
