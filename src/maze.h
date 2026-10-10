@@ -7,7 +7,8 @@
 // '#' wall, '.' dot, 'o' power pellet, ' ' floor, '-' ghost house door.
 class Maze {
 public:
-    void reset();  // reload layout, rebuild dot/pellet lists
+    void reset(int layout = 0);  // load layout #layout, rebuild dot/pellet lists
+    static int layoutCount();
     char at(int r, int c) const;
     bool walkablePac(int r, int c) const;
     bool walkableGhost(int r, int c, bool doorOk, bool interiorOk) const;

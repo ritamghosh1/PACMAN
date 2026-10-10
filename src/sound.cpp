@@ -2,6 +2,7 @@
 
 #include <QDateTime>
 #include <QFileInfo>
+#include <QtGlobal>
 
 SoundManager::SoundManager(QObject* parent) : QObject(parent) {
     initEffect(sndIntro_, QStringLiteral("pacman_intro.wav"), 0.85f);
@@ -14,11 +15,17 @@ SoundManager::SoundManager(QObject* parent) : QObject(parent) {
 }
 
 QString SoundManager::findSoundFile(const QString& filename) const {
+    // 1. Embedded copy from resources.qrc (always present in the built .exe).
+    const QString resPath = QStringLiteral(":/sounds/") + filename;
+    if (QFileInfo::exists(resPath)) {
+        return resPath;
+    }
+
+    // 2. Fallback: loose files next to the executable or the working directory.
     const QStringList searchDirs = {
         QDir::current().filePath(QStringLiteral("sounds")),
         QCoreApplication::applicationDirPath() + QStringLiteral("/sounds"),
         QCoreApplication::applicationDirPath() + QStringLiteral("/../sounds"),
-        QStringLiteral("/Users/ritamghosh/Desktop/CG/sounds")
     };
 
     for (const QString& dir : searchDirs) {
@@ -32,10 +39,16 @@ QString SoundManager::findSoundFile(const QString& filename) const {
 
 void SoundManager::initEffect(QSoundEffect& effect, const QString& filename, float volume) {
     QString path = findSoundFile(filename);
-    if (!path.isEmpty()) {
-        effect.setSource(QUrl::fromLocalFile(path));
-        effect.setVolume(volume);
+    if (path.isEmpty()) {
+        qWarning("SoundManager: could not find %s", qPrintable(filename));
+        return;
     }
+    // Resource paths (":/...") must be passed to QSoundEffect as "qrc:/..." URLs.
+    const QUrl url = path.startsWith(QLatin1Char(':'))
+                         ? QUrl(QStringLiteral("qrc") + path)
+                         : QUrl::fromLocalFile(path);
+    effect.setSource(url);
+    effect.setVolume(volume);
 }
 
 void SoundManager::playIntro() {

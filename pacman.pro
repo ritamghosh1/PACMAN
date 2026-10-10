@@ -6,8 +6,8 @@ CONFIG -= app_bundle
 TEMPLATE = app
 TARGET = pacman
 
-# AGL was removed from modern macOS SDKs
-QMAKE_LIBS_OPENGL = -framework OpenGL
+# AGL was removed from modern macOS SDKs (macOS only)
+macx: QMAKE_LIBS_OPENGL = -framework OpenGL
 
 SOURCES += \
     src/main.cpp \
@@ -23,3 +23,9 @@ HEADERS += \
     src/game.h \
     src/pixel_graphics.h \
     src/sound.h
+
+# Sound files are compiled into the executable via the Qt resource system,
+# so they show up under "Resources" in Qt Creator and are found at runtime
+# no matter which build folder the .exe runs from.
+RESOURCES += \
+    resources.qrc

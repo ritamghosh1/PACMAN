@@ -153,10 +153,11 @@ inline void drawPacman(QImage& img, int cx, int cy, Dir dir, int frame, const QC
 }
 
 // Dying animation (11 steps)
-inline void drawPacmanDying(QImage& img, int cx, int cy, float progress) {
+inline void drawPacmanDying(QImage& img, int cx, int cy, float progress,
+                            const QColor& color = QColor(255, 255, 0)) {
     int x0 = cx - 3;
     int y0 = cy - 3;
-    QRgb yellow = qRgb(255, 255, 0);
+    QRgb yellow = color.rgb();
 
     int step = std::clamp(static_cast<int>(progress * 11.0f), 0, 10);
 
