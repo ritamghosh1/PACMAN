@@ -100,7 +100,7 @@ void Renderer::resize(QOpenGLFunctions_3_3_Core* gl, int width, int height) {
     m_postFx.resize(gl, width, height);
 }
 
-void Renderer::render(QOpenGLFunctions_3_3_Core* gl, World& world, float totalTime) {
+void Renderer::render(QOpenGLFunctions_3_3_Core* gl, World& world, float totalTime, GLuint targetFbo) {
     // 1. Update Camera
     m_camera.setPosition(world.player().eyePosition());
     m_camera.setRotation(world.player().yaw(), world.player().pitch());
@@ -173,8 +173,8 @@ void Renderer::render(QOpenGLFunctions_3_3_Core* gl, World& world, float totalTi
 
     m_worldShader.unbind(gl);
 
-    // 4. End FBO & Run Post-Processing Pass to Screen
-    m_postFx.end(gl);
+    // 4. End FBO & Run Post-Processing Pass to Screen target FBO
+    m_postFx.end(gl, targetFbo);
 
     gl->glViewport(0, 0, m_width, m_height);
     m_postFx.render(gl, totalTime,

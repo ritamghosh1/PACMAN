@@ -18,6 +18,7 @@
 #include "app/DebugConsole.h"
 #include "story/IntroMovie.h"
 #include "story/Ending.h"
+#include "Overlay2D.h"
 
 namespace hm {
 
@@ -60,6 +61,7 @@ private:
     InventoryOverlay m_inventoryOverlay;
     RhythmOverlay m_rhythmOverlay;
     DebugConsole m_debugConsole;
+    Overlay2D m_overlay;
 
     std::unique_ptr<IntroMovie> m_introMovie;
     std::unique_ptr<EndingCutscene> m_endingCutscene;

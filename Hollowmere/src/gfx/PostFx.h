@@ -14,7 +14,7 @@ public:
     void resize(QOpenGLFunctions_3_3_Core* gl, int width, int height);
 
     void begin(QOpenGLFunctions_3_3_Core* gl);
-    void end(QOpenGLFunctions_3_3_Core* gl);
+    void end(QOpenGLFunctions_3_3_Core* gl, GLuint targetFbo = 0);
 
     void render(QOpenGLFunctions_3_3_Core* gl, float time, float fear, float health, float sanity);
 

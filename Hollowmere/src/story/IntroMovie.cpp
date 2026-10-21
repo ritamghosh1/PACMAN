@@ -49,7 +49,9 @@ void IntroMovie::setupScenes() {
             p.setBrush(QColor(255, 180, 50, static_cast<int>(180 * alpha)));
             for (int i = 0; i < 30; ++i) {
                 float ex = std::fmod((float)(i * 47) + std::sin(t * 2.0f + i) * 30.0f, (float)bounds.width());
+                if (ex < 0.0f) ex += bounds.width();
                 float ey = bounds.height() - std::fmod(t * 120.0f + (float)(i * 31), (float)bounds.height());
+                if (ey < 0.0f) ey += bounds.height();
                 p.drawEllipse(QPointF(ex, ey), 3, 3);
             }
         }

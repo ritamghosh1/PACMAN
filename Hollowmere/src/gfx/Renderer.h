@@ -19,7 +19,7 @@ public:
     bool init(QOpenGLFunctions_3_3_Core* gl, int width, int height);
     void resize(QOpenGLFunctions_3_3_Core* gl, int width, int height);
 
-    void render(QOpenGLFunctions_3_3_Core* gl, World& world, float totalTime);
+    void render(QOpenGLFunctions_3_3_Core* gl, World& world, float totalTime, GLuint targetFbo = 0);
     void destroy(QOpenGLFunctions_3_3_Core* gl);
 
     Camera& camera() { return m_camera; }

@@ -29,6 +29,7 @@ HEADERS += \
     src/gfx/ProcTex.h \
     src/gfx/Renderer.h \
     src/gfx/PostFx.h \
+    src/gfx/Overlay2D.h \
     src/gfx/ShadowMap.h \
     src/world/Collision.h \
     src/world/Door.h \
@@ -117,6 +118,7 @@ SOURCES += \
     src/gfx/ProcTex.cpp \
     src/gfx/Renderer.cpp \
     src/gfx/PostFx.cpp \
+    src/gfx/Overlay2D.cpp \
     src/gfx/ShadowMap.cpp \
     src/gfx/GhostRenderer.cpp \
     src/gfx/Decals.cpp \

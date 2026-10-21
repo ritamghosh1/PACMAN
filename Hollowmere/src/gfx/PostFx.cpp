@@ -85,8 +85,8 @@ void PostFx::begin(QOpenGLFunctions_3_3_Core* gl) {
     gl->glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 }
 
-void PostFx::end(QOpenGLFunctions_3_3_Core* gl) {
-    gl->glBindFramebuffer(GL_FRAMEBUFFER, 0);
+void PostFx::end(QOpenGLFunctions_3_3_Core* gl, GLuint targetFbo) {
+    gl->glBindFramebuffer(GL_FRAMEBUFFER, targetFbo);
 }
 
 void PostFx::render(QOpenGLFunctions_3_3_Core* gl, float time, float fear, float health, float sanity) {

@@ -106,7 +106,7 @@ void Cutscene::render(QPainter& p, const QRect& bounds) {
         p.setBrush(QColor(40, 40, 40, 180));
         p.drawRoundedRect(bx - 5, by - 22, barW + 10, barH + 28, 4, 4);
 
-        p.setFont(QFont("Monospace", 9, QFont::Bold));
+        p.setFont(QFont("Courier New", 9, QFont::Bold));
         p.setPen(QColor(200, 200, 200));
         p.drawText(bx, by - 6, "HOLD SPACE TO SKIP");
 
@@ -130,13 +130,16 @@ void Cutscene::drawVignetteAndGrain(QPainter& p, const QRect& bounds) {
 }
 
 void Cutscene::drawRainAndLightning(QPainter& p, const QRect& bounds, float t) {
+    if (t < 38.0f) return; // Rain only in exterior storm and manor scenes
     // Slanted rain lines
-    p.setPen(QPen(QColor(160, 180, 210, 40), 1.0f));
-    int numDrops = 80;
+    p.setPen(QPen(QColor(160, 180, 210, 80), 1.5f));
+    int numDrops = 100;
     for (int i = 0; i < numDrops; ++i) {
-        float xSeed = std::fmod((float)(i * 37) + t * 450.0f, (float)bounds.width());
-        float ySeed = std::fmod((float)(i * 73) + t * 900.0f, (float)bounds.height());
-        p.drawLine(QPointF(xSeed, ySeed), QPointF(xSeed - 6.0f, ySeed + 24.0f));
+        float xSeed = std::fmod((float)(i * 37) + t * 500.0f, (float)bounds.width());
+        if (xSeed < 0.0f) xSeed += bounds.width();
+        float ySeed = std::fmod((float)(i * 73) + t * 950.0f, (float)bounds.height());
+        if (ySeed < 0.0f) ySeed += bounds.height();
+        p.drawLine(QPointF(xSeed, ySeed), QPointF(xSeed - 8.0f, ySeed + 28.0f));
     }
 }
 

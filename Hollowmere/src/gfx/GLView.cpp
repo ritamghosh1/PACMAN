@@ -25,6 +25,7 @@ GLView::GLView(QWidget* parent)
 GLView::~GLView() {
     makeCurrent();
     m_renderer.destroy(this);
+    m_overlay.destroy(this);
     doneCurrent();
 }
 
@@ -70,6 +71,7 @@ void GLView::initializeGL() {
     int pixelH = static_cast<int>(height() * devicePixelRatioF());
 
     m_renderer.init(this, pixelW, pixelH);
+    m_overlay.init(this, pixelW, pixelH, devicePixelRatioF());
     m_world.init(this);
 
     m_menuOverlay.init(rect());
@@ -85,6 +87,7 @@ void GLView::resizeGL(int w, int h) {
     int pixelW = static_cast<int>(w * devicePixelRatioF());
     int pixelH = static_cast<int>(h * devicePixelRatioF());
     m_renderer.resize(this, pixelW, pixelH);
+    m_overlay.resize(this, pixelW, pixelH, devicePixelRatioF());
 
     m_menuOverlay.init(rect());
     m_pauseOverlay.init(rect());
@@ -97,15 +100,22 @@ void GLView::paintGL() {
     float dt = static_cast<float>(m_clock.frameTime());
     m_totalTime += dt;
 
+    int pixelW = static_cast<int>(width() * devicePixelRatioF());
+    int pixelH = static_cast<int>(height() * devicePixelRatioF());
+    GLuint targetFbo = defaultFramebufferObject();
+
     if (m_state == GameState::Menu) {
         m_menuOverlay.update(dt);
 
-        // Render 3D foyer live background
-        m_renderer.render(this, m_world, m_totalTime);
+        // Render 3D foyer live background directly to target FBO
+        m_renderer.render(this, m_world, m_totalTime, targetFbo);
 
-        QPainter painter(this);
-        m_menuOverlay.render(painter, rect(), QFile::exists("save.json"));
-        painter.end();
+        QPainter* p = m_overlay.begin();
+        if (p) {
+            m_menuOverlay.render(*p, rect(), QFile::exists("save.json"));
+            m_overlay.end();
+            m_overlay.render(this, targetFbo, pixelW, pixelH);
+        }
         return;
     }
 
@@ -114,10 +124,18 @@ void GLView::paintGL() {
             bool spaceDown = Input::instance().isKeyDown(Qt::Key_Space);
             m_introMovie->update(dt, spaceDown);
 
-            QPainter painter(this);
-            m_introMovie->render(painter, rect());
-            drawSubtitles(painter, rect());
-            painter.end();
+            glBindFramebuffer(GL_FRAMEBUFFER, targetFbo);
+            glViewport(0, 0, pixelW, pixelH);
+            glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+            QPainter* p = m_overlay.begin();
+            if (p) {
+                m_introMovie->render(*p, rect());
+                drawSubtitles(*p, rect());
+                m_overlay.end();
+                m_overlay.render(this, targetFbo, pixelW, pixelH);
+            }
 
             if (m_introMovie->isFinished()) {
                 setGameState(GameState::Playing);
@@ -131,9 +149,17 @@ void GLView::paintGL() {
             bool spaceDown = Input::instance().isKeyDown(Qt::Key_Space);
             m_endingCutscene->update(dt, spaceDown);
 
-            QPainter painter(this);
-            m_endingCutscene->render(painter, rect());
-            painter.end();
+            glBindFramebuffer(GL_FRAMEBUFFER, targetFbo);
+            glViewport(0, 0, pixelW, pixelH);
+            glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+            QPainter* p = m_overlay.begin();
+            if (p) {
+                m_endingCutscene->render(*p, rect());
+                m_overlay.end();
+                m_overlay.render(this, targetFbo, pixelW, pixelH);
+            }
 
             if (m_endingCutscene->isFinished()) {
                 setGameState(GameState::Menu);
@@ -162,47 +188,49 @@ void GLView::paintGL() {
     // Reset single-frame input deltas
     Input::instance().update();
 
-    // 2. 3D Render Pass
-    m_renderer.render(this, m_world, m_totalTime);
+    // 2. 3D Render Pass into target FBO
+    m_renderer.render(this, m_world, m_totalTime, targetFbo);
 
-    // 3. 2D HUD / Overlays Pass
-    QPainter painter(this);
-
-    if (m_world.deathSequence().isActive()) {
-        float blackAlpha = m_world.deathSequence().blackOverlayAlpha();
-        if (blackAlpha > 0.0f) {
-            painter.fillRect(rect(), QColor(0, 0, 0, static_cast<int>(blackAlpha * 255)));
+    // 3. 2D HUD / Overlays Pass via Overlay2D
+    QPainter* p = m_overlay.begin();
+    if (p) {
+        if (m_world.deathSequence().isActive()) {
+            float blackAlpha = m_world.deathSequence().blackOverlayAlpha();
+            if (blackAlpha > 0.0f) {
+                p->fillRect(rect(), QColor(0, 0, 0, static_cast<int>(blackAlpha * 255)));
+            }
         }
+
+        if (m_state == GameState::Playing) {
+            if (m_settings.qualityLevel >= 0) { // Render HUD
+                m_hud.draw(*p, rect(), m_world, static_cast<float>(m_clock.fps()));
+            }
+
+            if (m_inventoryOpen) {
+                m_inventoryOverlay.render(*p, rect(), m_world.inventory());
+            }
+
+            if (m_journalOpen) {
+                m_journalOverlay.render(*p, rect(), m_world.journal(), m_world.activeWing());
+            }
+
+            if (m_world.mercy().isActive()) {
+                m_rhythmOverlay.render(*p, rect(), m_world.mercy());
+            }
+
+            m_debugConsole.render(*p, rect(), m_world, static_cast<float>(m_clock.fps()));
+        } else if (m_state == GameState::Paused) {
+            m_pauseOverlay.render(*p, rect());
+        }
+
+        // Subtitles on top
+        if (m_settings.subtitles) {
+            drawSubtitles(*p, rect());
+        }
+
+        m_overlay.end();
+        m_overlay.render(this, targetFbo, pixelW, pixelH);
     }
-
-    if (m_state == GameState::Playing) {
-        if (m_settings.qualityLevel >= 0) { // Render HUD
-            m_hud.draw(painter, rect(), m_world, static_cast<float>(m_clock.fps()));
-        }
-
-        if (m_inventoryOpen) {
-            m_inventoryOverlay.render(painter, rect(), m_world.inventory());
-        }
-
-        if (m_journalOpen) {
-            m_journalOverlay.render(painter, rect(), m_world.journal(), m_world.activeWing());
-        }
-
-        if (m_world.mercy().isActive()) {
-            m_rhythmOverlay.render(painter, rect(), m_world.mercy());
-        }
-
-        m_debugConsole.render(painter, rect(), m_world, static_cast<float>(m_clock.fps()));
-    } else if (m_state == GameState::Paused) {
-        m_pauseOverlay.render(painter, rect());
-    }
-
-    // Subtitles on top
-    if (m_settings.subtitles) {
-        drawSubtitles(painter, rect());
-    }
-
-    painter.end();
 }
 
 void GLView::drawSubtitles(QPainter& p, const QRect& bounds) {
