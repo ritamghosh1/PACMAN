@@ -1,0 +1,8 @@
+<RCC>
+    <qresource prefix="/">
+        <file>shaders/world.vert</file>
+        <file>shaders/world.frag</file>
+        <file>shaders/post.vert</file>
+        <file>shaders/post.frag</file>
+    </qresource>
+</RCC>

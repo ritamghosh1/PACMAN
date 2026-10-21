@@ -1,0 +1,9 @@
+build/
+*.o
+moc_*
+Makefile
+.qmake.stash
+hollowmere
+hollowmere.app/
+save.json
+.DS_Store
