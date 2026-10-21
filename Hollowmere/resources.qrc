@@ -4,5 +4,9 @@
         <file>shaders/world.frag</file>
         <file>shaders/post.vert</file>
         <file>shaders/post.frag</file>
+        <file>shaders/shadow.vert</file>
+        <file>shaders/shadow.frag</file>
+        <file>shaders/ghost.vert</file>
+        <file>shaders/ghost.frag</file>
     </qresource>
 </RCC>

@@ -5,12 +5,40 @@ in vec3 vNormal;
 in vec2 vUV;
 in mat3 vTBN;
 in vec4 vColor;
+in vec4 vFragPosLightSpace;
 
 out vec4 FragColor;
 
 uniform sampler2D uDiffuseMap;
 uniform sampler2D uNormalMap;
+uniform sampler2D uShadowMap;
 uniform bool uUseNormalMap;
+uniform bool uUseShadows;
+
+float calculateShadow(vec4 fragPosLightSpace, vec3 normal, vec3 lightDir) {
+    // Perform perspective divide
+    vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
+    // Transform to [0, 1] range
+    projCoords = projCoords * 0.5 + 0.5;
+
+    if (projCoords.z > 1.0 || projCoords.x < 0.0 || projCoords.x > 1.0 || projCoords.y < 0.0 || projCoords.y > 1.0) {
+        return 0.0;
+    }
+
+    float currentDepth = projCoords.z;
+    float bias = max(0.003 * (1.0 - dot(normal, lightDir)), 0.0008);
+
+    // 3x3 PCF filter
+    float shadow = 0.0;
+    vec2 texelSize = 1.0 / textureSize(uShadowMap, 0);
+    for (int x = -1; x <= 1; ++x) {
+        for (int y = -1; y <= 1; ++y) {
+            float pcfDepth = texture(uShadowMap, projCoords.xy + vec2(x, y) * texelSize).r;
+            shadow += currentDepth - bias > pcfDepth ? 1.0 : 0.0;
+        }
+    }
+    return shadow / 9.0;
+}
 
 // View pos
 uniform vec3 uViewPos;
@@ -88,7 +116,13 @@ void main() {
         float spec = pow(max(dot(norm, halfwayDir), 0.0), 16.0);
         vec3 specular = uSpotLight.color * spec * 0.25;
 
-        result += (diffuse + specular) * atten * spotIntensity * uSpotLight.intensity;
+        float shadowFactor = 1.0;
+        if (uUseShadows) {
+            float shadow = calculateShadow(vFragPosLightSpace, norm, lightDir);
+            shadowFactor = 1.0 - shadow;
+        }
+
+        result += (diffuse + specular) * atten * spotIntensity * uSpotLight.intensity * shadowFactor;
     }
 
     // Point Lights

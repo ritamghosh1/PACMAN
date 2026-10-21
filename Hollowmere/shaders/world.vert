@@ -11,10 +11,12 @@ out vec3 vNormal;
 out vec2 vUV;
 out mat3 vTBN;
 out vec4 vColor;
+out vec4 vFragPosLightSpace;
 
 uniform mat4 uModel;
 uniform mat4 uView;
 uniform mat4 uProj;
+uniform mat4 uLightSpaceMatrix;
 
 void main() {
     vec4 worldPos = uModel * vec4(aPos, 1.0);
@@ -30,6 +32,7 @@ void main() {
     vec3 B = cross(N, T);
     vTBN = mat3(T, B, N);
     vNormal = N;
+    vFragPosLightSpace = uLightSpaceMatrix * worldPos;
 
     gl_Position = uProj * uView * worldPos;
 }

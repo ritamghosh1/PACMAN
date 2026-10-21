@@ -5,6 +5,8 @@
 #include "Camera.h"
 #include "Texture.h"
 #include "PostFx.h"
+#include "ShadowMap.h"
+#include "GhostRenderer.h"
 #include "world/World.h"
 
 namespace hm {
@@ -29,9 +31,12 @@ private:
     void renderPickups(QOpenGLFunctions_3_3_Core* gl, World& world);
     void renderGhosts(QOpenGLFunctions_3_3_Core* gl, World& world);
     void renderLanternModel(QOpenGLFunctions_3_3_Core* gl, World& world);
+    void renderShadowPass(QOpenGLFunctions_3_3_Core* gl, World& world, const SpotLight& spot);
 
     Shader m_worldShader;
     PostFx m_postFx;
+    ShadowMap m_shadowMap;
+    GhostRenderer m_ghostRenderer;
     Camera m_camera;
 
     // Procedural textures & Normal maps

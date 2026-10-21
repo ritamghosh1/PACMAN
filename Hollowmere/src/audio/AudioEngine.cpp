@@ -1,4 +1,5 @@
 #include "AudioEngine.h"
+#include "scores/motifs.h"
 #include <QAudioDeviceInfo>
 #include <algorithm>
 #include <cmath>
@@ -43,7 +44,7 @@ qint64 AudioStreamDevice::readData(char* data, qint64 maxlen) {
 }
 
 AudioEngine::AudioEngine() {
-    m_voices.resize(32); // 32 concurrent voice channels
+    m_voices.resize(64); // 64 concurrent voice channels
 }
 
 AudioEngine::~AudioEngine() {
@@ -76,8 +77,8 @@ bool AudioEngine::init() {
     m_streamDevice = new AudioStreamDevice(m_voices, m_mutex);
     m_audioOutput->start(m_streamDevice);
 
-    // Start background ambient horror drone
-    playSound(Synth::generateAmbientDrone(4.0f), 0.0f, 0.45f, true);
+    // Initial ambient drone
+    playSound(Synth::generateAmbientDrone(4.0f), 0.0f, 0.40f, true);
 
     return true;
 }
@@ -85,7 +86,6 @@ bool AudioEngine::init() {
 void AudioEngine::playSound(const std::vector<int16_t>& samples, float pan, float volume, bool loop) {
     std::lock_guard<std::mutex> lock(m_mutex);
 
-    // Find inactive voice or steal oldest non-looping
     int chosenIdx = -1;
     for (size_t i = 0; i < m_voices.size(); ++i) {
         if (!m_voices[i].active) {
@@ -117,59 +117,196 @@ void AudioEngine::playSound(const std::vector<int16_t>& samples, float pan, floa
     }
 }
 
-void AudioEngine::update(const Vec3& listenerPos, float listenerYawDeg) {
-    m_listenerPos = listenerPos;
-    m_listenerYaw = listenerYawDeg;
+void AudioEngine::playSpatial(const std::vector<int16_t>& samples,
+                             const Vec3& emitterPos,
+                             float volume,
+                             float maxDist,
+                             bool loop) {
+    if (samples.empty()) return;
+
+    // Resolve propagation along portals
+    auto prop = SoundPropagation::resolve(m_listener.position, emitterPos, m_portals);
+
+    // Compute spatial binaural cues
+    auto spat = Spatial::compute(prop.apparentPosition, m_listener, maxDist, 1.0f, true,
+                                !prop.isDirectPath, prop.isBlockedByDoor);
+
+    if (spat.gainLeft < 0.001f && spat.gainRight < 0.001f) return;
+
+    // Filter audio with lowpass if occluded or distant
+    std::vector<int16_t> filtered = samples;
+    if (spat.lowpassCutoff < 16000.0f) {
+        Spatial::applyLowpass(filtered, spat.lowpassCutoff);
+    }
+
+    std::lock_guard<std::mutex> lock(m_mutex);
+
+    int chosenIdx = -1;
+    for (size_t i = 0; i < m_voices.size(); ++i) {
+        if (!m_voices[i].active) {
+            chosenIdx = static_cast<int>(i);
+            break;
+        }
+    }
+
+    if (chosenIdx < 0) {
+        for (size_t i = 0; i < m_voices.size(); ++i) {
+            if (!m_voices[i].loop) {
+                chosenIdx = static_cast<int>(i);
+                break;
+            }
+        }
+    }
+
+    if (chosenIdx >= 0) {
+        m_voices[chosenIdx].samples = filtered;
+        m_voices[chosenIdx].cursor = 0;
+        m_voices[chosenIdx].volumeLeft = spat.gainLeft * volume * m_masterVolume;
+        m_voices[chosenIdx].volumeRight = spat.gainRight * volume * m_masterVolume;
+        m_voices[chosenIdx].loop = loop;
+        m_voices[chosenIdx].active = true;
+    }
 }
 
-void AudioEngine::playFootstep() {
-    static int variant = 0;
-    playSound(Synth::generateFootstep(variant++), 0.0f, 0.38f);
+void AudioEngine::update(float dt, const Vec3& listenerPos, float listenerYawDeg) {
+    m_listener.position = listenerPos;
+    m_listener.yawDeg = listenerYawDeg;
+
+    m_musicDirector.update(dt);
+
+    // Periodically feed dynamic score chunks
+    m_musicTimer += dt;
+    if (m_musicTimer >= 1.0f) {
+        m_musicTimer = 0.0f;
+        auto scoreChunk = m_musicDirector.renderChunk(1.0f);
+        playSound(scoreChunk, 0.0f, 0.55f, false);
+    }
+
+    // Periodically feed body heartbeat & breath
+    m_bodyAudioTimer += dt;
+    if (m_bodyAudioTimer >= 0.8f) {
+        m_bodyAudioTimer = 0.0f;
+        auto heart = m_bodyAudio.renderHeartbeatChunk(0.8f);
+        playSound(heart, 0.0f, 0.50f, false);
+
+        auto breath = m_bodyAudio.renderBreathingChunk(0.8f);
+        playSound(breath, 0.0f, 0.35f, false);
+
+        if (m_bodyAudio.isTinnitusActive()) {
+            auto tin = m_bodyAudio.renderTinnitusChunk(0.8f);
+            playSound(tin, 0.0f, 0.40f, false);
+        }
+    }
+}
+
+void AudioEngine::playFootstep(FootstepSurface surface, bool isRightFoot, bool isSprinting, bool isCrouching) {
+    auto step = m_bodyAudio.generateFootstep(surface, isRightFoot, isSprinting, isCrouching);
+    playSound(step, isRightFoot ? 0.15f : -0.15f, 0.42f);
 }
 
 void AudioEngine::playDoorCreak(const Vec3& pos) {
-    float dist = distance(m_listenerPos, pos);
-    float atten = clamp(1.0f - (dist / 14.0f), 0.0f, 1.0f);
-    if (atten > 0.05f) {
-        playSound(Synth::generateDoorCreak(), 0.0f, atten * 0.85f);
-    }
+    playSpatial(Synth::generateDoorCreak(), pos, 0.85f, 18.0f);
 }
 
 void AudioEngine::playDoorSlam(const Vec3& pos) {
-    float dist = distance(m_listenerPos, pos);
-    float atten = clamp(1.0f - (dist / 18.0f), 0.0f, 1.0f);
-    if (atten > 0.05f) {
-        playSound(Synth::generateDoorSlam(), 0.0f, atten * 0.95f);
-    }
+    playSpatial(Synth::generateDoorSlam(), pos, 1.0f, 24.0f);
+    m_bodyAudio.triggerTinnitus(2.5f);
 }
 
 void AudioEngine::playPickupChime() {
-    playSound(Synth::generatePickupChime(), 0.0f, 0.6f);
+    playSound(Synth::generatePickupChime(), 0.0f, 0.65f);
 }
 
 void AudioEngine::playLanternClick() {
-    playSound(Synth::generateLanternClick(), 0.15f, 0.5f);
+    playSound(Synth::generateLanternClick(), 0.15f, 0.55f);
 }
 
 void AudioEngine::playJumpscareStinger() {
     playSound(Synth::generateJumpscareStinger(), 0.0f, 1.0f);
+    m_bodyAudio.triggerTinnitus(4.0f);
 }
 
-void AudioEngine::setHeartbeatBpm(float /*bpm*/) {
-    // Dynamic heartbeat frequency
+void AudioEngine::playWeeperSob(const Vec3& pos) {
+    playSpatial(Synth2::generateWeeperSobbing(3.0f), pos, 0.90f, 22.0f);
 }
 
-void AudioEngine::setGhostWailDistance(float dist, float panAngle) {
-    float atten = clamp(1.0f - (dist / 15.0f), 0.0f, 1.0f);
-    if (atten > 0.08f) {
-        static float timer = 0.0f;
-        timer += 0.016f;
-        if (timer > 3.2f) {
-            timer = 0.0f;
-            float pan = std::sin(panAngle);
-            playSound(Synth::generateGhostWail(2.8f), pan, atten * 0.75f);
-        }
-    }
+void AudioEngine::playHollowManSnip(const Vec3& pos) {
+    playSpatial(Synth2::generateHollowManShearsSnip(), pos, 0.95f, 16.0f);
+}
+
+void AudioEngine::playChoirChord(const Vec3& pos, bool dissonant) {
+    playSpatial(Synth2::generateChoirChord(dissonant, 4.0f), pos, 0.90f, 25.0f);
+}
+
+void AudioEngine::playDollGiggle(const Vec3& pos) {
+    playSpatial(Synth2::generateDollGiggle(), pos, 0.85f, 18.0f);
+}
+
+void AudioEngine::playWardenKeys(const Vec3& pos) {
+    playSpatial(Synth2::generateWardenKeyJingle(), pos, 0.95f, 28.0f);
+}
+
+void AudioEngine::playWardenRoar(const Vec3& pos) {
+    playSpatial(Synth2::generateWardenGutturalRoar(2.5f), pos, 1.0f, 32.0f);
+    m_bodyAudio.triggerTinnitus(3.0f);
+}
+
+void AudioEngine::playVoice(const std::string& line, VoiceCharacter character, const Vec3& pos) {
+    auto voiceSamples = VoiceFx::synthesizePhrase(line, character);
+    playSpatial(voiceSamples, pos, 0.95f, 20.0f);
+}
+
+void AudioEngine::setFearLevel(float fear) {
+    m_bodyAudio.update(0.016f, fear, 1.0f, false, false, false);
+    m_musicDirector.setIntensity(fear);
+}
+
+void AudioEngine::setStamina(float stamina) {
+    m_bodyAudio.update(0.016f, 0.0f, stamina, false, false, false);
+}
+
+void AudioEngine::setInjured(bool injured) {
+    m_bodyAudio.update(0.016f, 0.0f, 1.0f, injured, false, false);
+}
+
+void AudioEngine::setHoldingBreath(bool holding) {
+    m_bodyAudio.update(0.016f, 0.0f, 1.0f, false, holding, false);
+}
+
+void AudioEngine::setListening(bool listening) {
+    m_bodyAudio.update(0.016f, 0.0f, 1.0f, false, false, listening);
+}
+
+void AudioEngine::setWingAcoustics(WingAcousticType wing) {
+    m_reverb.setWing(wing);
+}
+
+void AudioEngine::setMusicIntensity(float intensity) {
+    m_musicDirector.setIntensity(intensity);
+}
+
+void AudioEngine::setMusicState(MusicState state) {
+    m_musicDirector.setState(state);
+}
+
+void AudioEngine::triggerSilenceTrap(float durationSec) {
+    m_musicDirector.triggerSilenceTrap(durationSec);
+}
+
+void AudioEngine::playFlicker() {
+    playSound(Synth::generateLanternClick(), 0.0f, 0.7f);
+}
+
+void AudioEngine::playWhisper(const Vec3& pos) {
+    playSpatial(VoiceFx::synthesizePhrase("hollow", VoiceCharacter::WhisperingChild), pos, 0.8f, 15.0f);
+}
+
+void AudioEngine::playIntroScore() {
+    playSound(scores::renderIntroScore(), 0.0f, 0.85f);
+}
+
+void AudioEngine::playEndingScore(int type) {
+    playSound(scores::renderEndingScore(type), 0.0f, 0.9f);
 }
 
 } // namespace hm

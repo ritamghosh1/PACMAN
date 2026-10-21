@@ -21,6 +21,9 @@ public:
 
     SpotLight spotLight() const;
     const Vec3& heldPosition() const { return m_heldPos; }
+    const Vec3& position() const { return m_heldPos; }
+    const Vec3& direction() const { return m_lightDir; }
+    float cutoff() const { return m_focused ? 0.92f : 0.82f; }
 
 private:
     bool m_isOn = true;

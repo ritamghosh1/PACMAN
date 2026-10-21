@@ -37,10 +37,17 @@ public:
     HealthState healthState() const { return m_healthState; }
     float healthNormalized() const;
     void heal();
+    void restoreHealth() { heal(); }
     void takeDamage();
 
     float sanity() const { return m_sanity; }
     float sanityNormalized() const { return m_sanity / 100.0f; }
+    void restoreSanity(float s) { m_sanity = clamp(m_sanity + s, 0.0f, 100.0f); }
+    void setSanity(float s) { m_sanity = clamp(s, 0.0f, 100.0f); }
+    void refillOil(float amount) { m_lantern.addOil(amount); }
+    int sigilsCollected() const { return m_sigilCount; }
+    void collectSigil() { m_sigilCount++; }
+    bool hasBrassKey() const { return (m_keyFlags & 1) != 0; }
 
     Lantern& lantern() { return m_lantern; }
     const Lantern& lantern() const { return m_lantern; }

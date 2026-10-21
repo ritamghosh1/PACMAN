@@ -1,5 +1,7 @@
 #include "MapGen.h"
 #include "gfx/MeshBuilder.h"
+#include "Props.h"
+#include "PropsGore.h"
 
 namespace hm {
 
@@ -180,17 +182,32 @@ bool MapGen::generateManor(QOpenGLFunctions_3_3_Core* gl, MapData& outMap) {
         }
     }
 
-    // Add environmental props to flesh out the horror atmosphere
-    // Add library bookshelves in West Wing
-    propsBuilder.addBox(outMap.playerSpawnPos + Vec3(-4.5f, 1.4f, -3.0f), Vec3(0.5f, 2.8f, 2.2f), Vec2(1, 1), Vec4(0.4f, 0.25f, 0.15f, 1));
+    // Add environmental & architectural props from Props kit
+    Props::buildBookshelf(propsBuilder, outMap.playerSpawnPos + Vec3(-4.5f, 0.0f, -3.0f), 90.0f);
     outMap.collision.addBox(AABB(outMap.playerSpawnPos + Vec3(-4.8f, 0.0f, -4.2f), outMap.playerSpawnPos + Vec3(-4.2f, 2.8f, -1.8f)));
 
-    propsBuilder.addBox(outMap.playerSpawnPos + Vec3(-4.5f, 1.4f, 3.0f), Vec3(0.5f, 2.8f, 2.2f), Vec2(1, 1), Vec4(0.4f, 0.25f, 0.15f, 1));
+    Props::buildBookshelf(propsBuilder, outMap.playerSpawnPos + Vec3(-4.5f, 0.0f, 3.0f), 90.0f);
     outMap.collision.addBox(AABB(outMap.playerSpawnPos + Vec3(-4.8f, 0.0f, 1.8f), outMap.playerSpawnPos + Vec3(-4.2f, 2.8f, 4.2f)));
 
-    // Add wooden study tables & chairs
-    propsBuilder.addBox(outMap.playerSpawnPos + Vec3(0.0f, 0.45f, 4.0f), Vec3(1.6f, 0.9f, 0.9f), Vec2(1, 1), Vec4(0.35f, 0.2f, 0.1f, 1));
-    outMap.collision.addBox(AABB(outMap.playerSpawnPos + Vec3(-0.9f, 0.0f, 3.4f), outMap.playerSpawnPos + Vec3(0.9f, 0.9f, 4.6f)));
+    Props::buildGrandfatherClock(propsBuilder, outMap.playerSpawnPos + Vec3(3.5f, 0.0f, -4.0f), 0.0f);
+    Props::buildLocker(propsBuilder, outMap.playerSpawnPos + Vec3(4.0f, 0.0f, 2.0f), -90.0f);
+    Props::buildMirrorPedestal(propsBuilder, outMap.playerSpawnPos + Vec3(-8.0f, 0.0f, 10.0f), 45.0f);
+    Props::buildSteamPipeRun(propsBuilder, Vec3(6.0f, 2.8f, -4.0f), Vec3(14.0f, 2.8f, -4.0f));
+    Props::buildCandelabra(propsBuilder, outMap.playerSpawnPos + Vec3(2.5f, 0.0f, 5.0f));
+
+    // Wing 5 Chapel High Altar and Pews
+    Props::buildAltarTable(propsBuilder, Vec3(0.0f, 0.0f, 22.0f), 0.0f);
+    Props::buildPew(propsBuilder, Vec3(-2.0f, 0.0f, 18.0f), 0.0f);
+    Props::buildPew(propsBuilder, Vec3(2.0f, 0.0f, 18.0f), 0.0f);
+    Props::buildPew(propsBuilder, Vec3(-2.0f, 0.0f, 15.0f), 0.0f);
+    Props::buildPew(propsBuilder, Vec3(2.0f, 0.0f, 15.0f), 0.0f);
+
+    // Horror & Visceral Trauma set piece props from PropsGore
+    PropsGore::buildSurgicalGurney(propsBuilder, Vec3(8.0f, 0.0f, -8.0f), 30.0f);
+    PropsGore::buildSpecimenJar(propsBuilder, Vec3(8.8f, 0.9f, -7.5f));
+    PropsGore::buildRestraintChair(propsBuilder, Vec3(11.0f, 0.0f, -10.0f), -45.0f);
+    PropsGore::buildHangingHooks(propsBuilder, Vec3(10.0f, 3.4f, -9.0f));
+    PropsGore::buildSewnEyeDummy(propsBuilder, Vec3(-10.0f, 0.0f, -8.0f), 15.0f);
 
     // Upload geometry to GPU
     wallBuilder.build(gl, outMap.wallMesh);

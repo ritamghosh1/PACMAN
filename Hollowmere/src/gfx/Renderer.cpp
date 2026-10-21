@@ -26,10 +26,13 @@ bool Renderer::init(QOpenGLFunctions_3_3_Core* gl, int width, int height) {
         return false;
     }
 
-    // 2. PostFx
+    // 2. PostFx & ShadowMap
     if (!m_postFx.init(gl, width, height)) {
         qCritical("Failed to initialize PostFx!");
         return false;
+    }
+    if (!m_shadowMap.init(gl, 1024)) {
+        qWarning("Failed to initialize ShadowMap!");
     }
 
     // 3. Generate Procedural Textures & Normal Maps
@@ -84,6 +87,9 @@ bool Renderer::init(QOpenGLFunctions_3_3_Core* gl, int width, int height) {
     mb.addCylinder(Vec3(0, 0.20f, 0), 0.015f, 0.10f, 6, Vec4(0.3f, 0.3f, 0.3f, 1));
     mb.build(gl, m_lanternModelMesh);
 
+    // 5. Initialize custom Ghost Renderer
+    m_ghostRenderer.init(gl);
+
     return true;
 }
 
@@ -99,7 +105,14 @@ void Renderer::render(QOpenGLFunctions_3_3_Core* gl, World& world, float totalTi
     m_camera.setPosition(world.player().eyePosition());
     m_camera.setRotation(world.player().yaw(), world.player().pitch());
 
-    // 2. Begin HDR Scene Render into PostFx FBO
+    SpotLight spot = world.player().lantern().spotLight();
+
+    // 2. Render Shadow Depth Pass (for lantern spotlight)
+    if (spot.enabled) {
+        renderShadowPass(gl, world, spot);
+    }
+
+    // 3. Begin HDR Scene Render into PostFx FBO
     m_postFx.begin(gl);
 
     gl->glEnable(GL_DEPTH_TEST);
@@ -115,6 +128,12 @@ void Renderer::render(QOpenGLFunctions_3_3_Core* gl, World& world, float totalTi
     m_worldShader.setUniformMat4(gl, "uProj", proj);
     m_worldShader.setUniformVec3(gl, "uViewPos", m_camera.position());
 
+    // Shadows
+    m_worldShader.setUniformMat4(gl, "uLightSpaceMatrix", m_shadowMap.lightSpaceMatrix());
+    m_worldShader.setUniformInt(gl, "uShadowMap", 2);
+    m_worldShader.setUniformInt(gl, "uUseShadows", spot.enabled ? 1 : 0);
+    m_shadowMap.bindDepthTexture(gl, 2);
+
     // Environmental cold gloom ambient
     m_worldShader.setUniformVec3(gl, "uAmbientColor", Vec3(0.045f, 0.055f, 0.075f));
 
@@ -123,7 +142,6 @@ void Renderer::render(QOpenGLFunctions_3_3_Core* gl, World& world, float totalTi
     m_worldShader.setUniformFloat(gl, "uFogDensity", 0.085f);
 
     // Lantern Spotlight setup
-    SpotLight spot = world.player().lantern().spotLight();
     m_worldShader.setUniformVec3(gl, "uSpotLight.position", spot.position);
     m_worldShader.setUniformVec3(gl, "uSpotLight.direction", spot.direction);
     m_worldShader.setUniformVec3(gl, "uSpotLight.color", spot.color);
@@ -219,12 +237,20 @@ void Renderer::renderPickups(QOpenGLFunctions_3_3_Core* gl, World& world) {
 }
 
 void Renderer::renderGhosts(QOpenGLFunctions_3_3_Core* gl, World& world) {
-    m_worldShader.setUniformInt(gl, "uUseNormalMap", 0);
-    m_texCeil.bind(gl, 0); // translucent robe texture
-
+    float aspect = static_cast<float>(m_width) / static_cast<float>(std::max(1, m_height));
     for (const auto& ghost : world.ghosts()) {
-        m_worldShader.setUniformMat4(gl, "uModel", ghost.modelMatrix());
-        ghost.mesh().draw(gl);
+        m_ghostRenderer.render(gl,
+                               ghost->visualType(),
+                               ghost->modelMatrix(),
+                               m_camera,
+                               aspect,
+                               world.elapsedTime(),
+                               ghost->dissolve(),
+                               ghost->agitation(),
+                               world.player().lantern().position(),
+                               world.player().lantern().direction(),
+                               world.player().lantern().cutoff(),
+                               world.player().lantern().isOn());
     }
 }
 
@@ -241,7 +267,33 @@ void Renderer::renderLanternModel(QOpenGLFunctions_3_3_Core* gl, World& world) {
     m_lanternModelMesh.draw(gl);
 }
 
+void Renderer::renderShadowPass(QOpenGLFunctions_3_3_Core* gl, World& world, const SpotLight& spot) {
+    m_shadowMap.begin(gl, spot.position, spot.direction, 35.0f, spot.range);
+
+    Shader& depthShader = m_shadowMap.depthShader();
+    Mat4 identity = Mat4::identity();
+    depthShader.setUniformMat4(gl, "uModel", identity);
+
+    world.map().wallMesh.draw(gl);
+    world.map().floorMesh.draw(gl);
+    world.map().propsMesh.draw(gl);
+
+    for (const auto& door : world.map().doors) {
+        Mat4 model = Mat4::translate(door.position()) * Mat4::rotateY(radians(door.openAngle()));
+        depthShader.setUniformMat4(gl, "uModel", model);
+        m_doorMesh.draw(gl);
+    }
+
+    for (const auto& ghost : world.ghosts()) {
+        m_ghostRenderer.drawShadow(gl, ghost->visualType(), ghost->modelMatrix(), depthShader);
+    }
+
+    m_shadowMap.end(gl);
+}
+
 void Renderer::destroy(QOpenGLFunctions_3_3_Core* gl) {
+    m_ghostRenderer.destroy(gl);
+    m_shadowMap.destroy(gl);
     m_postFx.destroy(gl);
     m_texWall.destroy(gl);
     m_normWall.destroy(gl);
