@@ -37,7 +37,7 @@ void Hud::draw(QPainter& p, const QRect& bounds, const World& world, float fps) 
 
     // 6. Debug FPS (Top Right)
     p.setPen(QColor(140, 140, 150, 160));
-    QFont font("Monospace", 10);
+    QFont font("Courier New", 10);
     p.setFont(font);
     p.drawText(w - 110, 25, QString("FPS: %1").arg(static_cast<int>(fps)));
 }

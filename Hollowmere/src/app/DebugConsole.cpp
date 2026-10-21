@@ -42,7 +42,7 @@ void DebugConsole::render(QPainter& p, const QRect& bounds, const World& world, 
     p.setBrush(QColor(10, 18, 12, 220));
     p.drawRoundedRect(rect, 6, 6);
 
-    QFont dbgFont("Monospace", 9, QFont::Normal);
+    QFont dbgFont("Courier New", 9, QFont::Normal);
     p.setFont(dbgFont);
     p.setPen(QColor(120, 240, 140));
 

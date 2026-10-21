@@ -37,7 +37,7 @@ void PauseOverlay::render(QPainter& p, const QRect& bounds) {
     p.drawText(QRect(cx - 300, cy - 170, 600, 50), Qt::AlignCenter, "PAUSED");
 
     // Buttons
-    QFont btnFont("Monospace", 12, QFont::Bold);
+    QFont btnFont("Courier New", 12, QFont::Bold);
     btnFont.setLetterSpacing(QFont::AbsoluteSpacing, 2.0);
     p.setFont(btnFont);
 

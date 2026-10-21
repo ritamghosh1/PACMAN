@@ -86,14 +86,14 @@ void JournalOverlay::render(QPainter& p, const QRect& bounds, const Journal& jou
     p.drawText(paperRect.left() + 30, paperRect.top() + 45, "NORA'S FIELD JOURNAL");
 
     // Subtitle & Wing filters
-    QFont filterFont("Monospace", 10, QFont::Bold);
+    QFont filterFont("Courier New", 10, QFont::Bold);
     p.setFont(filterFont);
     p.setPen(QColor(110, 90, 70));
     QString wingStr = (m_selectedWing == -1) ? "ALL WINGS" : QString("WING %1").arg(m_selectedWing);
     p.drawText(paperRect.left() + 30, paperRect.top() + 75, QString("[FILTERS: %1] (1-5 to filter, 0 for All, UP/DOWN to browse)").arg(wingStr));
 
     // Stats: Collected Notes
-    QFont statFont("Monospace", 10, QFont::Normal);
+    QFont statFont("Courier New", 10, QFont::Normal);
     p.setFont(statFont);
     p.setPen(QColor(120, 40, 40));
     p.drawText(paperRect.right() - 320, paperRect.top() + 45, QString("NOTES COLLECTED: %1 / 40").arg(journal.allCollectedNotes().size()));
@@ -168,12 +168,12 @@ void JournalOverlay::render(QPainter& p, const QRect& bounds, const Journal& jou
     p.drawLine(paperRect.left(), paperRect.bottom() - 55, paperRect.right(), paperRect.bottom() - 55);
 
     if (m_hintTriggered) {
-        QFont hintF("Monospace", 10, QFont::Bold);
+        QFont hintF("Courier New", 10, QFont::Bold);
         p.setFont(hintF);
         p.setPen(QColor(160, 25, 25));
         p.drawText(paperRect.left() + 30, paperRect.bottom() - 22, m_activeHint);
     } else {
-        QFont hintPromptF("Monospace", 9, QFont::Normal);
+        QFont hintPromptF("Courier New", 9, QFont::Normal);
         p.setFont(hintPromptF);
         p.setPen(QColor(90, 80, 70));
         QString hintStr = QString("HOLD [H] FOR OBJECTIVE HINT (%1%)").arg(static_cast<int>((m_hintHoldTimer / m_hintHoldRequired) * 100.0f));

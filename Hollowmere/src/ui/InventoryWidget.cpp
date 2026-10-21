@@ -30,7 +30,7 @@ void InventoryOverlay::render(QPainter& p, const QRect& bounds, const Inventory&
     p.setBrush(QColor(8, 10, 14, 180));
     p.drawRoundedRect(startX - 15, startY - 12, totalW + 30, slotSize + 24, 8, 8);
 
-    QFont slotNumFont("Monospace", 9, QFont::Bold);
+    QFont slotNumFont("Courier New", 9, QFont::Bold);
     QFont itemNameFont("Arial", 8, QFont::Normal);
 
     for (int i = 0; i < 6; ++i) {

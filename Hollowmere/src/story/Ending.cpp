@@ -106,7 +106,7 @@ void EndingCutscene::setupEndingScenes() {
                     p.setPen(QColor(230, 200, 140, static_cast<int>(255 * alpha)));
                     p.drawText(QRect(cx - 300, static_cast<int>(y), 600, 30), Qt::AlignCenter, item.first);
 
-                    QFont subFont("Monospace", 12, QFont::Normal);
+                    QFont subFont("Courier New", 12, QFont::Normal);
                     p.setFont(subFont);
                     p.setPen(QColor(180, 180, 190, static_cast<int>(220 * alpha)));
                     p.drawText(QRect(cx - 300, static_cast<int>(y + 32), 600, 30), Qt::AlignCenter, item.second);

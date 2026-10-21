@@ -42,7 +42,7 @@ void RhythmOverlay::render(QPainter& p, const QRect& bounds, const MercySystem& 
     p.drawRoundedRect(indX - 3, cy - 2, 6, barH + 8, 2, 2);
 
     // Progress counter below
-    QFont cntFont("Monospace", 9, QFont::Normal);
+    QFont cntFont("Courier New", 9, QFont::Normal);
     p.setFont(cntFont);
     p.setPen(QColor(170, 175, 190));
     p.drawText(QRect(cx - barW / 2, cy + 22, barW, 20), Qt::AlignCenter,

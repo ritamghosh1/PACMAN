@@ -52,14 +52,14 @@ void MenuOverlay::render(QPainter& p, const QRect& bounds, bool hasSaveGame) {
     p.drawText(titleX, titleY, "HOLLOWMERE");
 
     // Subtitle
-    QFont subFont("Monospace", 10, QFont::Normal);
+    QFont subFont("Courier New", 10, QFont::Normal);
     subFont.setLetterSpacing(QFont::AbsoluteSpacing, 3.0);
     p.setFont(subFont);
     p.setPen(QColor(160, 160, 175));
     p.drawText(titleX + 4, titleY + 36, "A PSYCHOLOGICAL HORROR EXPERIENCE");
 
     // Buttons
-    QFont btnFont("Monospace", 13, QFont::Bold);
+    QFont btnFont("Courier New", 13, QFont::Bold);
     btnFont.setLetterSpacing(QFont::AbsoluteSpacing, 2.0);
     p.setFont(btnFont);
 
@@ -97,7 +97,7 @@ void MenuOverlay::render(QPainter& p, const QRect& bounds, bool hasSaveGame) {
     }
 
     // Version & Tech note at bottom left
-    QFont verFont("Monospace", 8, QFont::Normal);
+    QFont verFont("Courier New", 8, QFont::Normal);
     p.setFont(verFont);
     p.setPen(QColor(100, 105, 120));
     p.drawText(titleX, bounds.height() - 30, "v1.0.0-RELEASE | OPENGL 3.3 CORE | PROCEDURAL AUDIO & GRAPHICS");
