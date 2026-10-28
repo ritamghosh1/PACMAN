@@ -23,7 +23,9 @@ public:
     void toggleDebugOverlay() { m_showOverlay = !m_showOverlay; }
 
     void giveAllItems(World& world);
-    void skipToWing(World& world, int wing);
+    void unlockAllDoors(World& world);
+    void summonGhosts(World& world);
+    void teleportToObjective(World& world);
 
     void render(QPainter& p, const QRect& bounds, const World& world, float fps);
 

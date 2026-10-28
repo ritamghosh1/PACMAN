@@ -6,7 +6,7 @@
 #include "audio/Spatial.h"
 #include "audio/Fdn.h"
 #include "audio/EarlyRefl.h"
-#include "audio/VoiceFx.h"
+#include "audio/CineSfx.h"
 #include "audio/scores/motifs.h"
 
 using namespace hm;
@@ -59,10 +59,14 @@ int main() {
     assert(!std::isnan(outL) && !std::isnan(outR));
     std::cout << "  ✓ FDN 8-line Reverb filter OK" << std::endl;
 
-    // Test 6: VoiceFx synthesis
-    auto voice = VoiceFx::synthesizePhrase("Nora, don't let the dark in", VoiceCharacter::Mae);
-    assert(!voice.empty());
-    std::cout << "  ✓ VoiceFx speech formant synthesis OK (size: " << voice.size() << ")" << std::endl;
+    // Test 6: cutscene sound design (typewriter ticks, motifs, beds)
+    for (int s = 0; s < static_cast<int>(Speaker::Count); ++s) {
+        auto tick = cinesfx::typeTick(static_cast<Speaker>(s), 0);
+        auto mot = cinesfx::motif(static_cast<Speaker>(s));
+        assert(!tick.empty() && !mot.empty());
+    }
+    assert(!cinesfx::rainBed(2.0f).empty() && !cinesfx::musicBoxLullaby(0.5f).empty());
+    std::cout << "  ✓ CineSfx ticks, motifs and beds OK" << std::endl;
 
     std::cout << "[TEST] ALL AUDIO QA TESTS PASSED!" << std::endl;
     return 0;

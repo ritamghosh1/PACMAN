@@ -47,7 +47,7 @@
 - Cinematic cues: intro score 100 s full composition coded as note-lists (src/audio/scores/intro.cpp), ending scores E1-E5 (E1 resolves to major 3rd on final chord).
 
 ## VOICE
-- Dev-time voice pipeline: scripts/gen_voice.sh uses macOS `say` (e.g. voices Samantha/Daniel/Whisper) → AIFF → resample 48k WAV into assets/voice/ (committed, small). Runtime FX: formant shift, pitch, reverb, "dead radio" bandpass, reversed tail, doubling → used for Mae, children, Crane audio logs, Nora monologue. Nora's monologue can be subtitle-only if voice quality poor.
+- (Superseded: the game has no voice acting. See README section 4.) Old plan, kept for history: scripts/gen_voice.sh used macOS `say` (e.g. voices Samantha/Daniel/Whisper) → AIFF → resample 48k WAV into assets/voice/ (committed, small). Runtime FX: formant shift, pitch, reverb, "dead radio" bandpass, reversed tail, doubling → used for Mae, children, Crane audio logs, Nora monologue. Nora's monologue can be subtitle-only if voice quality poor.
 - ≤ 80 voice lines total; Crane's audio logs (10) = cold, slow, 70 bpm cadence, close-mic dry w/ tape hiss & wow/flutter.
 - Subtitles + sound captions mandatory.
 

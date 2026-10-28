@@ -6,7 +6,7 @@ namespace hm {
 
 HollowMan::HollowMan(const Vec3& spawnPos)
     : Ghost(GhostType::HollowMan, spawnPos) {
-    m_speed = 3.0f; // Fast when unobserved
+    m_speed = 2.5f; // Fast when unobserved
 }
 
 void HollowMan::update(float dt,

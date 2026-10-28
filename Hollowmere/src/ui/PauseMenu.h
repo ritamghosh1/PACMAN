@@ -33,6 +33,8 @@ public:
     PauseAction onMouseMove(const QPoint& pos);
     PauseAction onMouseClick(const QPoint& pos);
 
+    int hoveredIndex() const { return m_hoveredIndex; }
+
 private:
     std::vector<PauseButton> m_buttons;
     int m_hoveredIndex = -1;

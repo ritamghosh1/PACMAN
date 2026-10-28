@@ -21,6 +21,7 @@ public:
                 const NavGrid* nav = nullptr) override;
 
     bool isSingingPeacefully() const { return m_singingPeacefully; }
+    void setPatrolRoute(const std::vector<Vec3>& r) override { if (!r.empty()) { m_patrolRoute = r; m_patrolIdx = 0; } }
 
 private:
     float m_standStillTimer = 0.0f;

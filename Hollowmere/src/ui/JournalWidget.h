@@ -22,6 +22,7 @@ public:
     void prevNote();
     void selectWing(int wing); // -1 for all, 0-5 for wings
 
+    void setObjective(const QString& s) { m_objectiveText = QString("OBJECTIVE: ") + s; }
     bool isHintTriggered() const { return m_hintTriggered; }
     QString currentHint() const { return m_activeHint; }
 
@@ -32,6 +33,7 @@ private:
     const float m_hintHoldRequired = 5.0f;
     bool m_hintTriggered = false;
     QString m_activeHint;
+    QString m_objectiveText;
 
     void updateHint(int currentWing);
 };

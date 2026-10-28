@@ -6,6 +6,8 @@
 
 namespace hm {
 
+namespace { constexpr int kGameplayDroneTag = 9001; }
+
 AudioStreamDevice::AudioStreamDevice(std::vector<AudioVoice>& voices, std::mutex& mutex)
     : m_voices(voices), m_mutex(mutex) {
     open(QIODevice::ReadOnly);
@@ -31,9 +33,16 @@ qint64 AudioStreamDevice::readData(char* data, qint64 maxlen) {
                 }
             }
 
+            if (v.gain != v.gainTarget) {
+                v.gain += v.gainStep;
+                if ((v.gainStep > 0.0f && v.gain >= v.gainTarget) || (v.gainStep < 0.0f && v.gain <= v.gainTarget)) {
+                    v.gain = v.gainTarget;
+                    if (v.stopAtSilence && v.gain <= 0.0001f) { v.active = false; break; }
+                }
+            }
             int16_t sample = v.samples[v.cursor++];
-            int leftOut = static_cast<int>(out[i * 2 + 0]) + static_cast<int>(sample * v.volumeLeft);
-            int rightOut = static_cast<int>(out[i * 2 + 1]) + static_cast<int>(sample * v.volumeRight);
+            int leftOut = static_cast<int>(out[i * 2 + 0]) + static_cast<int>(sample * v.volumeLeft * v.gain);
+            int rightOut = static_cast<int>(out[i * 2 + 1]) + static_cast<int>(sample * v.volumeRight * v.gain);
 
             out[i * 2 + 0] = static_cast<int16_t>(std::clamp(leftOut, -32767, 32767));
             out[i * 2 + 1] = static_cast<int16_t>(std::clamp(rightOut, -32767, 32767));
@@ -79,6 +88,10 @@ bool AudioEngine::init() {
 
     // Initial ambient drone
     playSound(Synth::generateAmbientDrone(4.0f), 0.0f, 0.40f, true);
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        for (auto& v : m_voices) if (v.active && v.loop) v.tag = kGameplayDroneTag;
+    }
 
     return true;
 }
@@ -113,6 +126,10 @@ void AudioEngine::playSound(const std::vector<int16_t>& samples, float pan, floa
         m_voices[chosenIdx].volumeLeft = volL;
         m_voices[chosenIdx].volumeRight = volR;
         m_voices[chosenIdx].loop = loop;
+        m_voices[chosenIdx].tag = 0;
+        m_voices[chosenIdx].gain = m_voices[chosenIdx].gainTarget = 1.0f;
+        m_voices[chosenIdx].gainStep = 0.0f;
+        m_voices[chosenIdx].stopAtSilence = false;
         m_voices[chosenIdx].active = true;
     }
 }
@@ -164,6 +181,10 @@ void AudioEngine::playSpatial(const std::vector<int16_t>& samples,
         m_voices[chosenIdx].volumeLeft = spat.gainLeft * volume * m_masterVolume;
         m_voices[chosenIdx].volumeRight = spat.gainRight * volume * m_masterVolume;
         m_voices[chosenIdx].loop = loop;
+        m_voices[chosenIdx].tag = 0;
+        m_voices[chosenIdx].gain = m_voices[chosenIdx].gainTarget = 1.0f;
+        m_voices[chosenIdx].gainStep = 0.0f;
+        m_voices[chosenIdx].stopAtSilence = false;
         m_voices[chosenIdx].active = true;
     }
 }
@@ -172,6 +193,7 @@ void AudioEngine::update(float dt, const Vec3& listenerPos, float listenerYawDeg
     m_listener.position = listenerPos;
     m_listener.yawDeg = listenerYawDeg;
 
+    if (m_gameplayMuted) return;
     m_musicDirector.update(dt);
 
     // Periodically feed dynamic score chunks
@@ -251,11 +273,6 @@ void AudioEngine::playWardenRoar(const Vec3& pos) {
     m_bodyAudio.triggerTinnitus(3.0f);
 }
 
-void AudioEngine::playVoice(const std::string& line, VoiceCharacter character, const Vec3& pos) {
-    auto voiceSamples = VoiceFx::synthesizePhrase(line, character);
-    playSpatial(voiceSamples, pos, 0.95f, 20.0f);
-}
-
 void AudioEngine::setFearLevel(float fear) {
     m_bodyAudio.update(0.016f, fear, 1.0f, false, false, false);
     m_musicDirector.setIntensity(fear);
@@ -298,7 +315,10 @@ void AudioEngine::playFlicker() {
 }
 
 void AudioEngine::playWhisper(const Vec3& pos) {
-    playSpatial(VoiceFx::synthesizePhrase("hollow", VoiceCharacter::WhisperingChild), pos, 0.8f, 15.0f);
+    // Unvoiced: a breath of wind passing close behind the listener, then a faint tine.
+    static const std::vector<int16_t> wind = cinesfx::windBed(2.5f);
+    playSpatial(wind, pos, 0.55f, 15.0f);
+    playSpatial(cinesfx::musicBoxNote(1318.5f * 0.97f, 1.4f), pos, 0.3f, 12.0f);
 }
 
 void AudioEngine::playIntroScore() {
@@ -307,6 +327,93 @@ void AudioEngine::playIntroScore() {
 
 void AudioEngine::playEndingScore(int type) {
     playSound(scores::renderEndingScore(type), 0.0f, 0.9f);
+}
+
+} // namespace hm
+
+namespace hm {
+
+void AudioEngine::playCine(const std::vector<int16_t>& samples, float volume, float pan) {
+    playSound(samples, pan, volume, false);
+}
+
+void AudioEngine::startBed(int tag, const std::vector<int16_t>& samples, float volume, float fadeInSec) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    AudioVoice* slot = nullptr;
+    for (auto& v : m_voices) if (v.active && v.tag == tag) { slot = &v; break; }   // restart in place
+    if (!slot) for (auto& v : m_voices) if (!v.active) { slot = &v; break; }
+    if (!slot) return;
+    slot->samples = samples;
+    slot->cursor = 0;
+    slot->loop = true;
+    slot->tag = tag;
+    slot->volumeLeft = slot->volumeRight = volume * m_masterVolume;
+    slot->stopAtSilence = false;
+    slot->gain = 0.0f;
+    slot->gainTarget = 1.0f;
+    slot->gainStep = 1.0f / std::max(1.0f, fadeInSec * static_cast<float>(Synth::SAMPLE_RATE));
+    slot->active = true;
+}
+
+void AudioEngine::stopBed(int tag, float fadeOutSec) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    for (auto& v : m_voices) {
+        if (!v.active || v.tag != tag) continue;
+        v.gainTarget = 0.0f;
+        v.gainStep = -std::max(0.0001f, v.gain) / std::max(1.0f, fadeOutSec * static_cast<float>(Synth::SAMPLE_RATE));
+        v.stopAtSilence = true;
+    }
+}
+
+void AudioEngine::setBedVolume(int tag, float volume, float rampSec) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    for (auto& v : m_voices) {
+        if (!v.active || v.tag != tag) continue;
+        float base = std::max(0.0001f, volume * m_masterVolume);
+        float ratio = base / std::max(0.0001f, std::max(v.volumeLeft, v.volumeRight));
+        v.gainTarget = ratio;
+        v.gainStep = (ratio - v.gain) / std::max(1.0f, rampSec * static_cast<float>(Synth::SAMPLE_RATE));
+        v.stopAtSilence = false;
+    }
+}
+
+void AudioEngine::stopAllBeds(float fadeOutSec) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    for (auto& v : m_voices) {
+        if (!v.active || v.tag == 0 || v.tag == kGameplayDroneTag) continue;
+        v.gainTarget = 0.0f;
+        v.gainStep = -std::max(0.0001f, v.gain) / std::max(1.0f, fadeOutSec * static_cast<float>(Synth::SAMPLE_RATE));
+        v.stopAtSilence = true;
+    }
+}
+
+void AudioEngine::playTypeTick(Speaker who) {
+    if (m_tickCache.empty()) {
+        for (int s = 0; s < static_cast<int>(Speaker::Count); ++s)
+            for (int v = 0; v < 4; ++v) m_tickCache.push_back(cinesfx::typeTick(static_cast<Speaker>(s), v));
+    }
+    ++m_tickCounter;
+    int idx = static_cast<int>(who) * 4 + ((m_tickCounter * 3 + (m_tickCounter >> 2)) & 3);
+    playSound(m_tickCache[idx], 0.0f, 0.55f, false);
+}
+
+void AudioEngine::playSpeakerMotif(Speaker who) {
+    playSound(cinesfx::motif(who), 0.0f, 0.75f, false);
+}
+
+void AudioEngine::playUi(int kind) {
+    static const std::vector<int16_t> hover = cinesfx::uiHover(), click = cinesfx::uiClick(), adv = cinesfx::uiAdvance();
+    playSound(kind == 0 ? hover : (kind == 1 ? click : adv), 0.0f, 0.6f, false);
+}
+
+void AudioEngine::setGameplayMuted(bool muted) {
+    m_gameplayMuted = muted;
+    std::lock_guard<std::mutex> lock(m_mutex);
+    for (auto& v : m_voices) {
+        if (!v.active || v.tag != kGameplayDroneTag) continue;
+        v.gainTarget = muted ? 0.0f : 1.0f;
+        v.gainStep = (v.gainTarget - v.gain) / (1.5f * Synth::SAMPLE_RATE);
+    }
 }
 
 } // namespace hm

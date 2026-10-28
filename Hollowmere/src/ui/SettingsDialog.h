@@ -16,7 +16,6 @@ struct GameSettings {
     float masterVolume = 0.85f;
     float sfxVolume = 0.90f;
     float musicVolume = 0.75f;
-    float voiceVolume = 0.90f;
     float mouseSensitivity = 0.12f;
     bool invertY = false;
     float fov = 75.0f;

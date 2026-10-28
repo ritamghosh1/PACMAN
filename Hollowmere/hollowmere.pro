@@ -56,9 +56,9 @@ HEADERS += \
     src/audio/Reverb.h \
     src/audio/Propagation.h \
     src/audio/MusicDirector.h \
-    src/audio/VoiceFx.h \
     src/audio/BodyAudio.h \
     src/audio/scores/motifs.h \
+    src/audio/CineSfx.h \
     src/audio/AudioEngine.h \
     src/entities/Ghost.h \
     src/gameplay/Item.h \
@@ -82,9 +82,11 @@ HEADERS += \
     src/story/Journal.h \
     src/story/Notes.h \
     src/story/Subtitles.h \
-    src/story/Cutscene.h \
-    src/story/IntroMovie.h \
-    src/story/Ending.h \
+    src/story/Dialogue.h \
+    src/story/Cinematic.h \
+    src/story/CineArt.h \
+    src/story/CutsceneKit.h \
+    src/story/Cutscenes.h \
     src/world/Props.h \
     src/world/PropsGore.h \
     src/world/SafeRoom.h \
@@ -164,9 +166,11 @@ SOURCES += \
     src/story/Fragment.cpp \
     src/story/Journal.cpp \
     src/story/Subtitles.cpp \
-    src/story/Cutscene.cpp \
-    src/story/IntroMovie.cpp \
-    src/story/Ending.cpp \
+    src/story/Dialogue.cpp \
+    src/story/Cinematic.cpp \
+    src/story/CineArt.cpp \
+    src/story/Cutscenes.cpp \
+    src/story/CutscenesEnding.cpp \
     src/audio/Synth.cpp \
     src/audio/Synth2.cpp \
     src/audio/Spatial.cpp \
@@ -174,11 +178,11 @@ SOURCES += \
     src/audio/Reverb.cpp \
     src/audio/Propagation.cpp \
     src/audio/MusicDirector.cpp \
-    src/audio/VoiceFx.cpp \
     src/audio/BodyAudio.cpp \
     src/audio/scores/motifs.cpp \
     src/audio/scores/intro.cpp \
     src/audio/scores/endings.cpp \
+    src/audio/CineSfx.cpp \
     src/audio/AudioEngine.cpp \
     src/app/Difficulty.cpp \
     src/app/DebugConsole.cpp \

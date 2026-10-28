@@ -36,6 +36,7 @@ public:
     MenuAction onMouseMove(const QPoint& pos);
     MenuAction onMouseClick(const QPoint& pos);
 
+    int hoveredIndex() const { return m_hoveredIndex; }
     bool isSettingsOpen() const { return m_settingsOpen; }
     void closeSettings() { m_settingsOpen = false; }
 

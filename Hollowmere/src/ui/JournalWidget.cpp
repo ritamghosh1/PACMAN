@@ -38,30 +38,9 @@ void JournalOverlay::selectWing(int wing) {
     m_selectedNoteIndex = 0;
 }
 
-void JournalOverlay::updateHint(int currentWing) {
-    switch (currentWing) {
-    case 0:
-        m_activeHint = "OBJECTIVE: Inspect the grand staircase in the Foyer. Find the Brass Key and lantern oil.";
-        break;
-    case 1:
-        m_activeHint = "OBJECTIVE: Search the Library study. The cipher symbols are etched into book spines.";
-        break;
-    case 2:
-        m_activeHint = "OBJECTIVE: Rotate the glass mirrors in the Conservatory to direct the light beam into the crystal.";
-        break;
-    case 3:
-        m_activeHint = "OBJECTIVE: Balance the 4 steam valves in the Boiler Cellar to silence the pressure whistle.";
-        break;
-    case 4:
-        m_activeHint = "OBJECTIVE: Play the 3-note melody on the Nursery music box. Listen carefully for Eli's hum.";
-        break;
-    case 5:
-        m_activeHint = "OBJECTIVE: Place all five Sigils upon the Chapel altar. Face Dr. Crane.";
-        break;
-    default:
-        m_activeHint = "OBJECTIVE: Explore Hollowmere Manor. Find the 5 sigils to unlock the Chapel.";
-        break;
-    }
+void JournalOverlay::updateHint(int) {
+    m_hintTriggered = true;   // the objective is always shown now: no hidden hold-to-reveal
+    m_activeHint = m_objectiveText;
 }
 
 void JournalOverlay::render(QPainter& p, const QRect& bounds, const Journal& journal, int currentWing) {
@@ -176,7 +155,7 @@ void JournalOverlay::render(QPainter& p, const QRect& bounds, const Journal& jou
         QFont hintPromptF("Courier New", 9, QFont::Normal);
         p.setFont(hintPromptF);
         p.setPen(QColor(90, 80, 70));
-        QString hintStr = QString("HOLD [H] FOR OBJECTIVE HINT (%1%)").arg(static_cast<int>((m_hintHoldTimer / m_hintHoldRequired) * 100.0f));
+        QString hintStr = QString("OBJECTIVE (%1%)").arg(static_cast<int>((m_hintHoldTimer / m_hintHoldRequired) * 100.0f));
         p.drawText(paperRect.left() + 30, paperRect.bottom() - 22, hintStr);
 
         // Progress bar for hint

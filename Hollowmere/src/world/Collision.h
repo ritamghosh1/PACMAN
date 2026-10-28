@@ -28,8 +28,12 @@ public:
 
     const std::vector<Collider>& colliders() const { return m_colliders; }
 
+    // While set, motion resolution skips colliders with this tag (ghosts drift through doors).
+    void setIgnoreTag(int tag) { m_ignoreTag = tag; }
+
 private:
     std::vector<Collider> m_colliders;
+    int m_ignoreTag = -1;
 };
 
 } // namespace hm

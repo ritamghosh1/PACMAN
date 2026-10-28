@@ -16,7 +16,6 @@ void GameSettings::saveToFile(const QString& path) const {
     obj["masterVolume"] = masterVolume;
     obj["sfxVolume"] = sfxVolume;
     obj["musicVolume"] = musicVolume;
-    obj["voiceVolume"] = voiceVolume;
     obj["mouseSensitivity"] = mouseSensitivity;
     obj["invertY"] = invertY;
     obj["fov"] = fov;

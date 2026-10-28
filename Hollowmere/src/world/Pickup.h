@@ -7,7 +7,7 @@ namespace hm {
 
 enum class PickupType {
     OilFlask,
-    BrassKey,
+    Key,
     MemorySigil,
     Note,
     Bandage
@@ -28,6 +28,10 @@ public:
     const QString& name() const { return m_name; }
     const QString& description() const { return m_description; }
 
+    // keyId for Key pickups, sigil index (1..4) for MemorySigil, note id for Note
+    int tag() const { return m_tag; }
+    void setTag(int t) { m_tag = t; }
+
     bool isCollected() const { return m_collected; }
     void collect() { m_collected = true; }
 
@@ -39,6 +43,7 @@ private:
     Vec3 m_position;
     QString m_name;
     QString m_description;
+    int m_tag = 0;
     bool m_collected = false;
 
     float m_bobTime = 0.0f;

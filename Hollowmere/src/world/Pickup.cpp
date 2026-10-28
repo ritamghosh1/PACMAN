@@ -20,7 +20,7 @@ Vec3 Pickup::renderPosition() const {
 }
 
 AABB Pickup::bounds() const {
-    return AABB(m_position - Vec3(0.4f, 0.4f, 0.4f), m_position + Vec3(0.4f, 0.4f, 0.4f));
+    return AABB(m_position - Vec3(0.55f, 0.6f, 0.55f), m_position + Vec3(0.55f, 0.6f, 0.55f));
 }
 
 } // namespace hm

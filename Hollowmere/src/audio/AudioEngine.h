@@ -12,7 +12,7 @@
 #include "Propagation.h"
 #include "MusicDirector.h"
 #include "BodyAudio.h"
-#include "VoiceFx.h"
+#include "CineSfx.h"
 #include "core/mathx.h"
 
 namespace hm {
@@ -24,6 +24,11 @@ struct AudioVoice {
     float volumeRight = 1.0f;
     bool loop = false;
     bool active = false;
+    int tag = 0;               // non-zero: addressable by stopTag() (ambience beds, scores)
+    float gain = 1.0f;         // current ramped gain
+    float gainTarget = 1.0f;
+    float gainStep = 0.0f;     // per-sample ramp; lets beds fade instead of clicking off
+    bool stopAtSilence = false;
 };
 
 class AudioStreamDevice : public QIODevice {
@@ -85,8 +90,16 @@ public:
     void playIntroScore();
     void playEndingScore(int type);
 
-    // Voice & narrative
-    void playVoice(const std::string& line, VoiceCharacter character, const Vec3& pos);
+    // Story presentation (no voice acting: ambience, motifs and typewriter ticks carry the scene)
+    void playCine(const std::vector<int16_t>& samples, float volume = 1.0f, float pan = 0.0f);
+    void startBed(int tag, const std::vector<int16_t>& samples, float volume, float fadeInSec = 1.5f);
+    void stopBed(int tag, float fadeOutSec = 1.5f);
+    void setBedVolume(int tag, float volume, float rampSec = 0.5f);
+    void stopAllBeds(float fadeOutSec = 1.0f);
+    void playTypeTick(Speaker who);
+    void playSpeakerMotif(Speaker who);
+    void playUi(int kind); // 0 hover, 1 click, 2 advance
+    void setGameplayMuted(bool muted);  // silences the ambient drone/score/body layers during cutscenes
 
     // Player body state
     void setFearLevel(float fear);
@@ -122,6 +135,9 @@ private:
     MusicDirector m_musicDirector;
     BodyAudio m_bodyAudio;
 
+    std::vector<std::vector<int16_t>> m_tickCache;   // [speaker*4 + variant]
+    int m_tickCounter = 0;
+    bool m_gameplayMuted = false;
     float m_bodyAudioTimer = 0.0f;
     float m_musicTimer = 0.0f;
 };

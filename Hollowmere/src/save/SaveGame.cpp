@@ -50,6 +50,18 @@ bool SaveGame::saveToFile(const std::string& filepath, const SaveData& data) {
     for (int f : data.discoveredFragmentIds) fragArr.append(f);
     root["fragments"] = fragArr;
 
+    QJsonArray pickArr;
+    for (int p : data.collectedPickupIds) pickArr.append(p);
+    root["collectedPickups"] = pickArr;
+    QJsonArray openArr;
+    for (int d : data.openDoorIds) openArr.append(d);
+    root["openDoors"] = openArr;
+    root["keyFlags"] = data.keyFlags;
+    root["sigils"] = data.sigilCount;
+    root["visitedWings"] = data.visitedWingMask;
+    root["wardenActive"] = data.wardenActive;
+    root["explored"] = QString::fromStdString(data.exploredBits);
+
     // Choices
     QJsonObject cObj;
     cObj["sparedAda"] = data.choices.sparedAda;
@@ -123,6 +135,16 @@ bool SaveGame::loadFromFile(const std::string& filepath, SaveData& outData) {
     for (auto val : root["fragments"].toArray()) {
         outData.discoveredFragmentIds.push_back(val.toInt());
     }
+
+    outData.collectedPickupIds.clear();
+    for (auto val : root["collectedPickups"].toArray()) outData.collectedPickupIds.push_back(val.toInt());
+    outData.openDoorIds.clear();
+    for (auto val : root["openDoors"].toArray()) outData.openDoorIds.push_back(val.toInt());
+    outData.keyFlags = root["keyFlags"].toInt(0);
+    outData.sigilCount = root["sigils"].toInt(0);
+    outData.visitedWingMask = root["visitedWings"].toInt(0);
+    outData.wardenActive = root["wardenActive"].toBool(false);
+    outData.exploredBits = root["explored"].toString().toStdString();
 
     QJsonObject cObj = root["choices"].toObject();
     outData.choices.sparedAda = cObj["sparedAda"].toBool(false);

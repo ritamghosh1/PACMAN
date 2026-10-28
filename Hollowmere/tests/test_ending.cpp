@@ -39,7 +39,7 @@ int main() {
     // Test E5: Revelation
     GameChoices c5;
     c5.confessedEarly = true;
-    c5.fragmentsFound = 12;
+    c5.fragmentsFound = 16;
     assert(EndingResolver::resolve(c5) == EndingType::E5_Revelation);
     std::cout << "  ✓ E5 Revelation path OK" << std::endl;
 

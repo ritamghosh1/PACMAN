@@ -28,11 +28,13 @@ In the winter of 1925, Nora returns to the decaying ruins of **Hollowmere Manor 
 | **Alt** | Listen Verb | High-cut lowpass filter; visually ripples in the direction of ghost sounds |
 | **Ctrl** | Blink / Close Eyes | Shuts eyes (darkens screen); Hollow Man only moves when unobserved |
 | **Shift + C** | Hold Breath | Muffles breathing sound; required to evade The Choir |
-| **H** | Hum / Mercy / Hint | Hum "Hush Little Light" to soothe Ada; hold 5s in Journal for hint |
+| **H** | Hum / Mercy | Hold near Ada (the Weeper) to hum "Hush Little Light" and calm her |
+| **M** | Minimap | Toggles the fog-of-war map (gold marker = current objective) |
+| **Space / Click / E** | Story text | First press completes the typewriter line, second press continues |
 | **1 – 6** | Inventory Hotkeys | Selects items (Matches, Bandages, Kerosene, Throwable Bottles) |
 | **Tab** | Field Journal | Opens parchment journal with 40 lore notes, wing filters, and hints |
 | **Esc** | Pause / Settings | Opens Pause menu, settings dialog, or closes journal |
-| **F3 / F4 / F5** | Debug Console | F3 = debug stats, F4 = noclip, F5 = give all items (cheat mode) |
+| **F3 / F5 / F6 / F7 / F8** | Debug | F3 stats, F5 give all items, F6 teleport to objective, F7 open all doors, F8 summon ghosts |
 
 ---
 
@@ -89,10 +91,11 @@ The audio system operates as a real-time 64-voice stereo mixer built purely in c
 - **Woodworth ITD & ILD**: Interaural Time Difference (~0.64ms max delay) and frequency-dependent head shadow filtering.
 - **8-line Householder Feedback Delay Network (FDN)**: Dynamic RT60 reverberation tailored per wing (Stone Foyer, Wood Library, Glass Conservatory, Damp Cellar, Soft Nursery, Cathedral Chapel).
 - **Portal Propagation**: Sound resolves through door openings and corridors, muffling closed doors by -18 dB with a 900 Hz lowpass filter.
-- **Voice Formants**: Synthetic formant vocal tracts synthesizing dialogue lines for Mae, Dr. Crane, and Nora.
+- **No voice acting**: story text is silent type. Characters are recognised by sound instead: each speaker has a typewriter-tick timbre and a short signature motif (Nora: felt piano, Mae: music box, Dr. Crane: tritone drone + keys, Narrator: typewriter bell, Ada: falling sob-tone, Eli: toy-piano plinks, the house: low heartbeat + creak).
+- **Cutscene sound design** (`audio/CineSfx.*`): rain, wind, fire, car, thunder, gate creak/clang, music-box lullaby and more, synthesised on a worker thread at start-up. No downloaded sounds.
 
 ### Audio Testing Folder (`audio_samples/`)
-All 31 procedural audio files have been exported as sample WAV files into the dedicated directory:
+The procedural audio files can be exported (`tools/audio_dump.cpp`) as sample WAV files into the dedicated directory:
 ```
 Hollowmere/audio_samples/
 ├── 01_ghost_weeper_sob.wav
@@ -108,8 +111,8 @@ Hollowmere/audio_samples/
 ├── ...
 ├── 22_score_cinematic_intro_80s.wav
 ├── 23_score_ending1_crimson_dawn.wav
-├── 28_voice_mae_spirit.wav
-├── 29_voice_dr_crane_tape.wav
+├── 28_cine_rain_bed.wav ... 34_cine_music_box_warped.wav
+├── motif_<speaker>.wav / tick_<speaker>.wav   <- character-recognition sounds
 └── AUDIO_CATALOG.md            <- Detailed breakdown of synthesis mechanisms & triggers
 ```
 
@@ -176,3 +179,15 @@ Hollowmere/
 
 ---
 *Created for Computer Graphics Systems Laboratory — Standalone 3D Engine Architecture.*
+
+
+---
+
+## 6. Story Presentation & Gameplay Flow (v2)
+
+- **Typewriter text everywhere.** Cutscenes, notes, hints and the first-steps briefing all use one click-to-continue typewriter box (`story/Dialogue.*`).
+- **Animated cutscenes** (`story/Cinematic.*`, `story/CineArt.*`, `story/Cutscenes*.cpp`): a six-shot intro (the locked door in 1998, the rain-streaked window, the music box, the drive, the gate, the title) and five ending epilogues + credits. Preview any of them without OpenGL or audio: `qmake tools/cine_preview.pro && make && ./cine_preview intro out/`.
+- **A clear quest.** Four wings, four memory sigils, one key per wing, then the chapel altar. The HUD shows the current objective, a compass arrow, an on-screen marker and a fog-of-war minimap; the objective item also glows in the world.
+- **Colour-coded wings.** Library (timber), Conservatory (green), Boiler Cellar (iron blue), Nursery (pink), Chapel (blood stone). Each shows a typed location banner when you enter.
+- **Safe rooms.** The foyer and the candle-lit entrance of every wing: ghosts cannot hurt you there.
+- Fixed in this version: edge-triggered input (E / F / clicks) fired twice per frame so doors and the lantern appeared not to work; doors now fit their doorways and swing; ghosts used a wrong forward vector; navigation covered only a fraction of the map; Continue/Load rebuilt the level without a GL context.

@@ -100,7 +100,7 @@ void MenuOverlay::render(QPainter& p, const QRect& bounds, bool hasSaveGame) {
     QFont verFont("Courier New", 8, QFont::Normal);
     p.setFont(verFont);
     p.setPen(QColor(100, 105, 120));
-    p.drawText(titleX, bounds.height() - 30, "v1.0.0-RELEASE | OPENGL 3.3 CORE | PROCEDURAL AUDIO & GRAPHICS");
+    p.drawText(titleX, bounds.height() - 30, "OPENGL 3.3 CORE  |  PROCEDURAL SOUND DESIGN  |  NO VOICE ACTING");
 }
 
 MenuAction MenuOverlay::onMouseMove(const QPoint& pos) {

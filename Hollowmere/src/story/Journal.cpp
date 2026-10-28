@@ -29,20 +29,13 @@ std::vector<NoteData> Journal::getNotesForWing(WingLore wing) const {
 
 std::string Journal::getCurrentObjectiveHint(int currentWing) const {
     switch (currentWing) {
-        case 0:
-            return "FOYER: Locate the Brass Key beneath the grandfather clock to unseal the Library door.";
-        case 1:
-            return "LIBRARY: Arrange the four book ciphers by date to open the hidden archive and claim the Sigil of Bone.";
-        case 2:
-            return "CONSERVATORY: Rotate the brass mirrors to guide the lantern beam into the crystal iris while avoiding Mr. Pell.";
-        case 3:
-            return "CELLAR: Balance the pressure valves to 140 PSI and vent steam to pass the blind Choir unnoticed.";
-        case 4:
-            return "NURSERY: Reconstruct the music box melody from the nursery chimes to calm Eli and earn the Sigil of Glass.";
-        case 5:
-            return "CHAPEL: Place all five Sigils upon the altar to confront the Warden and choose Nora's fate.";
-        default:
-            return "Survive the corridors and keep your lantern burning.";
+        case 0: return "FOYER: the safe hub. Follow the gold arrow to your objective.";
+        case 1: return "LIBRARY: Ada weeps here. Creep (C), or hold H beside her to hum the lullaby.";
+        case 2: return "CONSERVATORY: Mr. Pell freezes while your lantern lights him. Keep him in view.";
+        case 3: return "CELLAR: the Choir is blind. Walk, don't run; hold breath (SHIFT+C) when close.";
+        case 4: return "NURSERY: Eli wants a game. Close your eyes (CTRL) near him, then open them.";
+        case 5: return "CHAPEL: bring all four sigils to the altar. Run from the Warden.";
+        default: return "Survive the corridors and keep your lantern burning.";
     }
 }
 

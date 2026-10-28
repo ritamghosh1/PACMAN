@@ -14,11 +14,14 @@ struct SafeRoomZone {
     bool discovered = false;
 };
 
+// Candle-lit refuges where ghosts cannot hurt the player.
 class SafeRoomManager {
 public:
-    SafeRoomManager();
+    SafeRoomManager() = default;
 
+    void setZones(std::vector<SafeRoomZone> zones) { m_rooms = std::move(zones); }
     bool isInSafeRoom(const Vec3& playerPos) const;
+    const SafeRoomZone* zoneAt(const Vec3& playerPos) const;
     const std::vector<SafeRoomZone>& rooms() const { return m_rooms; }
 
 private:

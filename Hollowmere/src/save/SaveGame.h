@@ -23,6 +23,15 @@ struct SaveData {
     std::vector<int> collectedNoteIds;
     std::vector<int> discoveredFragmentIds;
 
+    // Progress through the manor
+    std::vector<int> collectedPickupIds;
+    std::vector<int> openDoorIds;
+    int keyFlags = 0;
+    int sigilCount = 0;
+    int visitedWingMask = 0;
+    bool wardenActive = false;
+    std::string exploredBits;     // minimap fog-of-war, one char per cell
+
     GameChoices choices;
 };
 

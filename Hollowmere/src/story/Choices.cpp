@@ -4,7 +4,7 @@ namespace hm {
 
 EndingType EndingResolver::resolve(const GameChoices& choices) {
     // E5: Secret Revelation — 12 fragments + early confession
-    if (choices.fragmentsFound >= 12 && choices.confessedEarly) {
+    if (choices.fragmentsFound >= 16 && choices.confessedEarly) {
         return EndingType::E5_Revelation;
     }
 
@@ -41,15 +41,15 @@ std::string EndingResolver::getEndingTitle(EndingType ending) {
 std::string EndingResolver::getEndingEpilogue(EndingType ending) {
     switch (ending) {
         case EndingType::E1_Release:
-            return "The iron gates swing open into golden morning mist. Nora gently sets down her lantern on the wet cobblestones. In her palm rests Mae's blue ribbon, warm at last. The screaming halls behind her have fallen into sacred quiet.";
+            return "The sigils settle into the altar and the ward door swings open. Nora says it aloud at last: she locked them in, and she is sorry. The children forgive her. The house burns away into morning, and when she wakes, Mae's red ribbon is warm in her hand.";
         case EndingType::E2_Consumed:
-            return "The ashes of Dr. Crane's records drift like black snow through the foyer. Nora feels the chill seep through her ribs until her breath no longer steams. She takes the iron keys from the floor. Someone must mind the wards.";
+            return "Ash drifts through the foyer like black snow. The cold seeps into Nora until her breath no longer steams. She lifts the iron keys from the floor. Someone must mind the wards.";
         case EndingType::E3_Loop:
-            return "Nora bolts through the rain, slamming the car door behind her. As the ignition turns, the radio crackles to life—humming a music box in 3/4 time. Through the foggy windshield, the silhouette of the manor waits.";
+            return "Nora drags Mae to the car and drives without looking back. The radio crackles into a music box, a lullaby in three-four time. In the mirror, the manor waits. The road remembers her.";
         case EndingType::E4_Martyr:
-            return "Standing before the altar, Nora gathers the children's tears into herself. Their small silhouettes dissolve into points of warm candlelight. They are free. The house cradles her as its silent guardian.";
+            return "Nora kneels at the altar and sings the children to rest. Their small shapes dissolve into candlelight, and Mae walks out alone into the dawn. The house keeps Nora as its quiet guardian.";
         case EndingType::E5_Revelation:
-            return "The secret drawer clicks open. Inside, a yellowed medical chart in Nora's own handwriting: 'Patient 404 — Nora Crane'. The truth washes over the shadows like daylight over broken glass.";
+            return "The hidden drawer clicks open. Inside lies a yellowed medical chart in Dr. Crane's hand: Patient 404, Nora Hale. The truth washes over the shadows like daylight over broken glass.";
     }
     return "";
 }

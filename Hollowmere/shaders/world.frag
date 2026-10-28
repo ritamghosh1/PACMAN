@@ -67,7 +67,7 @@ struct PointLightData {
     float range;
     bool enabled;
 };
-#define MAX_POINT_LIGHTS 4
+#define MAX_POINT_LIGHTS 12
 uniform PointLightData uPointLights[MAX_POINT_LIGHTS];
 uniform int uNumPointLights;
 

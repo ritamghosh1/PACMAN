@@ -52,14 +52,14 @@ All 31 audio files below were procedurally synthesized in real time using additi
 
 ---
 
-## 4. Synthesized Speech Formants (Phase 7 Voice Pipeline)
+## 4. Cutscene Ambience & Character Recognition (replaces the old voice pipeline)
 
-| Filename | Duration | Synthesis Mechanism | In-Game Trigger Location & Context |
-|---|---|---|---|
-| `28_voice_mae_spirit.wav` | 4.1s | High-register female vocal tract formant (F1 450, F2 2100) + ethereal reverse swell | Mae's spirit whispering guidance during early Foyer exploration and safe room rest. |
-| `29_voice_dr_crane_tape.wav` | 4.1s | Low baritone formant (F1 280, F2 1200) + wow/flutter tape hiss & telephone bandpass | Audio cassette reel recordings found in Dr. Crane's study and medical ward. |
-| `30_voice_nora_monologue.wav` | 4.4s | Protagonist vocal tract with slight tremor and room convolution | Nora's internal monologue reflecting on the 1918 orphanage fire and lost memories. |
-| `31_voice_child_whisper.wav` | 1.8s | Whispered sibilant noise formant with binaural panning | Hallucination whisper triggered when Nora's sanity drops below 60%. |
+The game has **no voice acting**. Story text is typed on screen and each character is identified by sound:
 
----
-*Created by Hollowmere Audio Engine QA Pipeline*
+| Sound | Description | Used for |
+|---|---|---|
+| `tick_<speaker>` | Per-character typewriter tick. Narrator: typewriter strike. Nora: soft felt tap. Mae: glass ping. Crane: cold metal clack. Ada: airy breath. Eli: wooden block. House: dull knock. | Played as each letter appears |
+| `motif_<speaker>` | ~1.5 s signature phrase (Nora: D4-A4 felt piano; Mae: music-box E-G-B with a flat last tine; Crane: tritone drone + key jangle; Narrator: typewriter bell; Ada: falling wavering tone; Eli: toy plinks + block clacks; House: heartbeat + creak) | Played whenever a different character starts speaking |
+| `28_cine_rain_bed` ... `34_cine_music_box_warped` | Loop-safe rain, fire and car beds, thunder, gate creak/clang, warped lullaby | Intro and ending cutscenes |
+
+Regenerate with `tools/audio_dump.cpp`.

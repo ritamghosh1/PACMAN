@@ -16,8 +16,9 @@
 #include "ui/SettingsDialog.h"
 #include "app/GameState.h"
 #include "app/DebugConsole.h"
-#include "story/IntroMovie.h"
-#include "story/Ending.h"
+#include "story/Cinematic.h"
+#include "story/Cutscenes.h"
+#include "story/Dialogue.h"
 #include "Overlay2D.h"
 
 namespace hm {
@@ -47,6 +48,15 @@ protected:
     void focusOutEvent(QFocusEvent* event) override;
 
 private:
+    void startNewGame();
+    void finishIntro();
+    void beginEnding();
+    void applySettings();
+    void startMenuAmbience();
+    void stepWorld(float dt);
+    void paintCinematic(float dt, Cinematic* cine);
+    void drawSubtitles(QPainter& p, const QRect& bounds);
+
     Renderer m_renderer;
     World m_world;
     Clock m_clock;
@@ -62,18 +72,21 @@ private:
     RhythmOverlay m_rhythmOverlay;
     DebugConsole m_debugConsole;
     Overlay2D m_overlay;
+    DialogueBox m_dialogue;
 
-    std::unique_ptr<IntroMovie> m_introMovie;
-    std::unique_ptr<EndingCutscene> m_endingCutscene;
+    std::unique_ptr<Cinematic> m_cinematic;
+    bool m_cinematicIsEnding = false;
 
     bool m_journalOpen = false;
     bool m_inventoryOpen = false;
+    bool m_menuAmbienceOn = false;
+    int m_menuHover = -1;
+    int m_pauseHover = -1;
 
     QTimer m_frameTimer;
     float m_totalTime = 0.0f;
     bool m_cursorCaptured = false;
-
-    void drawSubtitles(QPainter& p, const QRect& bounds);
+    bool m_ignoreNextMove = false;
 };
 
 } // namespace hm

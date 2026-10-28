@@ -27,6 +27,7 @@ public:
     QString currentText() const { return m_text; }
     QColor currentColor() const { return m_color; }
     float alpha() const;
+    float elapsed() const { return m_timer; }
 
 private:
     SubtitleSystem() = default;

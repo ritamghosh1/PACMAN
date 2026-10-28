@@ -58,7 +58,7 @@ Vec3 Collision::resolveMotion(const Vec3& /*currentPos*/, const Vec3& targetPos,
     // 2 iterations of relaxation for corner sliding
     for (int iter = 0; iter < 2; ++iter) {
         for (const auto& c : m_colliders) {
-            if (!c.enabled) continue;
+            if (!c.enabled || c.tag == m_ignoreTag) continue;
             resolveCircleAABB(pos.x, pos.z, pos.y, c.box);
         }
     }

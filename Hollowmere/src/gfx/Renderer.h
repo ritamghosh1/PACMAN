@@ -50,11 +50,20 @@ private:
     Texture m_normCeil;
 
     Texture m_texProps;
+    Texture m_texWhite;
     Texture m_texBlood;
 
     // Dynamic props meshes
-    Mesh m_doorMesh;
-    Mesh m_pickupMesh;
+    Mesh m_doorMeshes[5];          // one per key colour (0 = unlocked door)
+    Mesh m_sigilMeshes[5];         // indexed by sigil number 1..4
+    Mesh m_keyMeshes[5];           // indexed by key id 1..4
+    Mesh m_noteMesh;
+    Mesh m_oilMesh;
+    Mesh m_bandageMesh;
+    Vec3 m_ambient{0.1f, 0.1f, 0.14f};
+    Vec3 m_fogColor{0.03f, 0.03f, 0.05f};
+    float m_fogDensity = 0.05f;
+    float m_lastTime = 0.0f;
     Mesh m_lanternModelMesh;
 
     int m_width = 1280;

@@ -8,8 +8,15 @@ namespace hm {
 
 Player::Player() = default;
 
-void Player::spawn(const Vec3& pos) {
+Vec3 Player::forward() const {
+    float yawRad = radians(m_yaw);
+    return Vec3(std::cos(yawRad), 0.0f, std::sin(yawRad));
+}
+
+void Player::spawn(const Vec3& pos, float yawDeg) {
     m_position = pos;
+    m_yaw = yawDeg;
+    m_pitch = 0.0f;
     m_velocity = Vec3(0, 0, 0);
     m_stamina = config::tune::STAMINA_MAX;
     m_healthState = HealthState::Healthy;
@@ -71,8 +78,7 @@ void Player::update(float dt, Collision& collision, std::vector<Door>& doors, st
     Input& input = Input::instance();
 
     // Mouse look
-    float mouseSens = 0.12f;
-    addRotation(input.mouseDeltaX() * mouseSens, -input.mouseDeltaY() * mouseSens);
+    addRotation(input.mouseDeltaX() * m_mouseSens, (m_invertY ? 1.0f : -1.0f) * input.mouseDeltaY() * m_mouseSens);
 
     // Flashlight controls
     if (input.wasKeyPressed(Qt::Key_F)) {
@@ -168,68 +174,75 @@ void Player::update(float dt, Collision& collision, std::vector<Door>& doors, st
 void Player::handleInteraction(Collision& collision, std::vector<Door>& doors, std::vector<Pickup>& pickups) {
     Input& input = Input::instance();
     m_currentPrompt.clear();
+    if (!m_interactionEnabled) return;
 
     float yawRad = radians(m_yaw);
     float pitchRad = radians(m_pitch);
     Vec3 fwd(std::cos(pitchRad) * std::cos(yawRad), std::sin(pitchRad), std::cos(pitchRad) * std::sin(yawRad));
     fwd = normalize(fwd);
+    Vec3 eye = eyePosition();
+    const bool pressed = input.wasKeyPressed(Qt::Key_E) || input.wasMouseButtonPressed(Qt::LeftButton);
 
-    Ray interactRay(eyePosition(), fwd);
-
-    // 1. Check Pickups
+    // 1. Pickups: forgiving "near and roughly facing" test instead of a pixel-perfect ray
+    Pickup* best = nullptr;
+    float bestScore = 0.0f;
     for (auto& p : pickups) {
         if (p.isCollected()) continue;
-        float hitDist = 0.0f;
-        if (interactRay.intersectAABB(p.bounds(), hitDist) && hitDist < config::tune::INTERACT_DISTANCE) {
-            m_currentPrompt = QString("[E] Pick up %1").arg(p.name());
-
-            if (input.wasKeyPressed(Qt::Key_E) || input.wasMouseButtonPressed(Qt::LeftButton)) {
-                p.collect();
-                m_notificationToast = QString("Found %1").arg(p.name());
-                m_toastTimer = 3.0f;
-
-                if (p.type() == PickupType::OilFlask) {
-                    m_lantern.addOil(35.0f);
-                } else if (p.type() == PickupType::BrassKey) {
-                    m_keyFlags |= (1 << 1);
-                } else if (p.type() == PickupType::Bandage) {
-                    m_bandageCount++;
-                    heal();
-                } else if (p.type() == PickupType::MemorySigil) {
-                    m_sigilCount++;
-                }
+        Vec3 to = p.position() - eye;
+        float d = length(to);
+        if (d > config::tune::INTERACT_DISTANCE + 0.9f || d < 0.01f) continue;
+        float facing = dot(to * (1.0f / d), fwd);
+        if (facing < 0.55f && d > 1.3f) continue;
+        float score = facing - d * 0.12f;
+        if (!best || score > bestScore) { best = &p; bestScore = score; }
+    }
+    if (best) {
+        const char* verb = best->type() == PickupType::Note ? "Read" : "Pick up";
+        m_currentPrompt = QString("[E] %1 %2").arg(verb).arg(best->name());
+        if (pressed) {
+            best->collect();
+            m_notificationToast = best->type() == PickupType::Note ? QString("Added to journal: %1").arg(best->name()) : QString("Found %1").arg(best->name());
+            m_toastTimer = 3.0f;
+            switch (best->type()) {
+            case PickupType::OilFlask: m_lantern.addOil(40.0f); break;
+            case PickupType::Key: m_keyFlags |= (1 << best->tag()); break;
+            case PickupType::Bandage: m_bandageCount++; heal(); break;
+            case PickupType::MemorySigil: m_sigilCount++; break;
+            case PickupType::Note: break;
             }
-            return;
+            m_pickupEvents.push_back({best->type(), best->tag(), best->name(), best->description(), best->position()});
         }
+        return;
     }
 
-    // 2. Check Doors
-    int hitTag = 0;
-    int hitId = 0;
-    float hitDist = 0.0f;
-    if (collision.raycast(interactRay, config::tune::INTERACT_DISTANCE, hitTag, hitId, hitDist)) {
-        if (hitTag == 1) { // Door
-            for (auto& door : doors) {
-                if (door.id() == hitId) {
-                    if (door.isLocked()) {
-                        m_currentPrompt = "[E] Unlock Door (Locked)";
-                    } else if (door.isOpen()) {
-                        m_currentPrompt = "[E] Close Door";
-                    } else {
-                        m_currentPrompt = "[E] Open Door";
-                    }
-
-                    if (input.wasKeyPressed(Qt::Key_E) || input.wasMouseButtonPressed(Qt::LeftButton)) {
-                        QString msg;
-                        if (door.tryInteract(m_keyFlags, msg)) {
-                            collision.setColliderEnabled(door.id(), !door.isOpen());
-                        }
-                        m_notificationToast = msg;
-                        m_toastTimer = 2.5f;
-                    }
-                    return;
-                }
+    // 2. Doors: nearest door in front of us (open doors have no collider, so no ray here)
+    Door* bestDoor = nullptr;
+    float bestD = 1e9f;
+    for (auto& door : doors) {
+        Vec3 to = door.position() + Vec3(0, 1.2f, 0) - eye;
+        float d = length(to);
+        if (d > config::tune::INTERACT_DISTANCE + 0.6f || d < 0.01f) continue;
+        if (dot(to * (1.0f / d), fwd) < 0.45f) continue;
+        if (d < bestD) { bestD = d; bestDoor = &door; }
+    }
+    if (bestDoor) {
+        Door& door = *bestDoor;
+        if (door.isLocked()) m_currentPrompt = hasKey(door.keyId()) ? QString("[E] Unlock door (%1)").arg(Door::keyName(door.keyId())) : QString("[E] Locked - needs the %1").arg(Door::keyName(door.keyId()));
+        else m_currentPrompt = door.isOpen() ? "[E] Close door" : "[E] Open door";
+        if (pressed && door.isOpen() && distance(Vec3(m_position.x, 0, m_position.z), Vec3(door.position().x, 0, door.position().z)) < 1.5f) {
+            m_notificationToast = "You're standing in the doorway.";
+            m_toastTimer = 1.8f;
+        } else if (pressed) {
+            QString msg;
+            bool wasLocked = door.isLocked();
+            if (door.tryInteract(m_keyFlags, msg)) {
+                collision.setColliderEnabled(door.id(), !door.isOpen());
+                m_doorEvents.push_back({wasLocked ? DoorEvent::Unlocked : (door.isOpen() ? DoorEvent::Opened : DoorEvent::Closed), door.position(), door.keyId()});
+            } else {
+                m_doorEvents.push_back({DoorEvent::Locked, door.position(), door.keyId()});
             }
+            m_notificationToast = msg;
+            m_toastTimer = 2.5f;
         }
     }
 }

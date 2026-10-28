@@ -5,7 +5,8 @@
 #include "audio/Synth.h"
 #include "audio/Synth2.h"
 #include "audio/scores/motifs.h"
-#include "audio/VoiceFx.h"
+#include "audio/CineSfx.h"
+#include "audio/CineSfx.h"
 
 static void writeWav(const std::string& path, const std::vector<int16_t>& pcm, int sampleRate = 44100, int channels = 1) {
     std::ofstream out(path, std::ios::binary);
@@ -83,19 +84,24 @@ int main() {
     writeWav(outDir + "/26_score_ending4_martyr.wav", hm::scores::renderEndingScore(3));
     writeWav(outDir + "/27_score_ending5_wardens_ledger.wav", hm::scores::renderEndingScore(4));
 
-    // 4. Synthesized Voice Lines
-    std::cout << "4. Synthesizing Narrative Voice Lines..." << std::endl;
-    writeWav(outDir + "/28_voice_mae_spirit.wav",
-             hm::VoiceFx::synthesizePhrase("Nora... keep the light close. The dark isn't empty anymore.", hm::VoiceCharacter::Mae));
-    writeWav(outDir + "/29_voice_dr_crane_tape.wav",
-             hm::VoiceFx::synthesizePhrase("The children did not burn. They wait for you at Hollowmere.", hm::VoiceCharacter::DrCrane));
-    writeWav(outDir + "/30_voice_nora_monologue.wav",
-             hm::VoiceFx::synthesizePhrase("Seven years... and I still hear their crying in the floorboards.", hm::VoiceCharacter::Nora));
-    writeWav(outDir + "/31_voice_child_whisper.wav",
-             hm::VoiceFx::synthesizePhrase("She hid inside the wall...", hm::VoiceCharacter::WhisperingChild));
+    // 4. Cutscene ambience, character motifs & typewriter ticks (no voice acting)
+    std::cout << "4. Synthesizing cutscene ambience and character-recognition sounds..." << std::endl;
+    namespace cs = hm::cinesfx;
+    writeWav(outDir + "/28_cine_rain_bed.wav", cs::rainBed());
+    writeWav(outDir + "/29_cine_fire_bed.wav", cs::fireBed());
+    writeWav(outDir + "/30_cine_car_bed.wav", cs::carBed());
+    writeWav(outDir + "/31_cine_thunder.wav", cs::thunder());
+    writeWav(outDir + "/32_cine_gate_creak.wav", cs::gateCreak());
+    writeWav(outDir + "/33_cine_gate_clang.wav", cs::gateClang());
+    writeWav(outDir + "/34_cine_music_box_warped.wav", cs::musicBoxLullaby(0.8f));
+    const char* names[] = {"narrator", "nora", "mae", "crane", "ada", "eli", "manor"};
+    for (int s = 0; s < static_cast<int>(hm::Speaker::Count); ++s) {
+        writeWav(outDir + "/motif_" + names[s] + ".wav", cs::motif(static_cast<hm::Speaker>(s)));
+        writeWav(outDir + "/tick_" + names[s] + ".wav", cs::typeTick(static_cast<hm::Speaker>(s), 0));
+    }
 
     std::cout << "=========================================================" << std::endl;
-    std::cout << "SUCCESS! All 31 procedural audio files exported to ./" << outDir << "/" << std::endl;
+    std::cout << "SUCCESS! All procedural audio files exported to ./" << outDir << "/" << std::endl;
     std::cout << "=========================================================" << std::endl;
     return 0;
 }

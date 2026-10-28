@@ -7,7 +7,7 @@ namespace hm {
 
 Warden::Warden(const Vec3& spawnPos)
     : Ghost(GhostType::Warden, spawnPos), m_lastKnownPlayerPos(spawnPos) {
-    m_speed = 3.6f; // Relentless speed
+    m_speed = 2.7f; // Relentless, but a sprinting player out-runs him
 }
 
 void Warden::update(float dt,

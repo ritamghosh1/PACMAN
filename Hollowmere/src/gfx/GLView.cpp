@@ -2,12 +2,24 @@
 #include "core/Input.h"
 #include "story/Subtitles.h"
 #include "save/SaveGame.h"
+#include <QApplication>
+#include <QCursor>
+#include <QDir>
+#include <QFile>
 #include <QKeyEvent>
 #include <QMouseEvent>
-#include <QCursor>
-#include <QApplication>
+#include <QStandardPaths>
+#include <cmath>
 
 namespace hm {
+
+namespace {
+QString savePath() {
+    QString dir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    QDir().mkpath(dir);
+    return dir + "/save.json";
+}
+} // namespace
 
 GLView::GLView(QWidget* parent)
     : QOpenGLWidget(parent) {
@@ -15,11 +27,10 @@ GLView::GLView(QWidget* parent)
     setMouseTracking(true);
 
     m_settings.loadFromFile();
+    cinesfx::Bank::prewarm();   // render all cutscene sounds on a worker thread while the menu is up
 
-    connect(&m_frameTimer, &QTimer::timeout, this, [this]() {
-        update();
-    });
-    m_frameTimer.start(16); // ~60 FPS update
+    connect(&m_frameTimer, &QTimer::timeout, this, [this]() { update(); });
+    m_frameTimer.start(8);
 }
 
 GLView::~GLView() {
@@ -34,38 +45,48 @@ void GLView::setCursorCaptured(bool captured) {
     Input::instance().setMouseLocked(captured);
     if (captured) {
         setCursor(Qt::BlankCursor);
-        QPoint center(width() / 2, height() / 2);
-        QCursor::setPos(mapToGlobal(center));
+        m_ignoreNextMove = true;
+        QCursor::setPos(mapToGlobal(QPoint(width() / 2, height() / 2)));
     } else {
         setCursor(Qt::ArrowCursor);
     }
 }
 
-void GLView::setGameState(GameState state) {
-    m_state = state;
-    if (m_state == GameState::Playing) {
-        setCursorCaptured(true);
-    } else {
-        setCursorCaptured(false);
-    }
+void GLView::applySettings() {
+    m_world.audio().setMasterVolume(m_settings.masterVolume);
+    m_world.player().setMouseSensitivity(m_settings.mouseSensitivity);
+    m_world.player().setInvertY(m_settings.invertY);
+    m_renderer.camera().setFov(m_settings.fov);
+}
 
-    if (m_state == GameState::Intro) {
-        if (!m_introMovie) {
-            m_introMovie = std::make_unique<IntroMovie>(&m_world.audio());
-        }
-        m_introMovie->reset();
-    } else if (m_state == GameState::Ending) {
-        EndingType ending = EndingResolver::resolve(m_world.choices());
-        m_endingCutscene = std::make_unique<EndingCutscene>(ending, &m_world.audio());
+void GLView::startMenuAmbience() {
+    if (m_menuAmbienceOn || !cinesfx::Bank::ready()) return;
+    const auto& b = cinesfx::Bank::get();
+    m_world.audio().startBed(104, b.wind, 0.30f, 3.0f);
+    m_world.audio().startBed(105, b.padLow, 0.32f, 4.0f);
+    m_menuAmbienceOn = true;
+}
+
+void GLView::setGameState(GameState state) {
+    GameState prev = m_state;
+    m_state = state;
+    setCursorCaptured(state == GameState::Playing);
+    if (state == GameState::Menu) {
+        m_cinematic.reset();
+        if (prev != GameState::Menu) m_menuAmbienceOn = false;   // re-arm so the beds restart
+        m_world.audio().setGameplayMuted(false);
     }
+    if (state == GameState::Playing && prev != GameState::Paused) {
+        m_world.audio().stopBed(104, 2.0f);
+        m_world.audio().stopBed(105, 2.0f);
+        m_menuAmbienceOn = false;
+    }
+    Input::instance().update();
 }
 
 void GLView::initializeGL() {
     initializeOpenGLFunctions();
-
-    const GLubyte* glRenderer = glGetString(GL_RENDERER);
-    const GLubyte* glVersion = glGetString(GL_VERSION);
-    qInfo("Hollowmere Engine initialized on: %s (OpenGL %s)", glRenderer, glVersion);
+    qInfo("Hollowmere Engine initialized on: %s (OpenGL %s)", glGetString(GL_RENDERER), glGetString(GL_VERSION));
 
     int pixelW = static_cast<int>(width() * devicePixelRatioF());
     int pixelH = static_cast<int>(height() * devicePixelRatioF());
@@ -73,11 +94,13 @@ void GLView::initializeGL() {
     m_renderer.init(this, pixelW, pixelH);
     m_overlay.init(this, pixelW, pixelH, devicePixelRatioF());
     m_world.init(this);
+    m_dialogue.setAudio(&m_world.audio());
 
     m_menuOverlay.init(rect());
     m_pauseOverlay.init(rect());
     m_journalOverlay.init(rect());
     m_inventoryOverlay.init(rect());
+    applySettings();
 
     m_clock.reset();
     setGameState(GameState::Menu);
@@ -88,16 +111,81 @@ void GLView::resizeGL(int w, int h) {
     int pixelH = static_cast<int>(h * devicePixelRatioF());
     m_renderer.resize(this, pixelW, pixelH);
     m_overlay.resize(this, pixelW, pixelH, devicePixelRatioF());
-
     m_menuOverlay.init(rect());
     m_pauseOverlay.init(rect());
     m_journalOverlay.init(rect());
     m_inventoryOverlay.init(rect());
 }
 
+void GLView::startNewGame() {
+    m_world.audio().playUi(1);
+    m_world.audio().stopBed(104, 1.5f);
+    m_world.audio().stopBed(105, 1.5f);
+    m_cinematic = makeIntroCinematic(&m_world.audio());
+    m_cinematic->start();
+    m_cinematicIsEnding = false;
+    setGameState(GameState::Intro);
+}
+
+void GLView::finishIntro() {
+    m_cinematic.reset();
+    m_world.newGame();           // fresh manor + the first-steps briefing
+    applySettings();
+    m_hud.resetSession();
+    m_dialogue.clear();
+    m_journalOpen = m_inventoryOpen = false;
+    setGameState(GameState::Playing);
+}
+
+void GLView::beginEnding() {
+    m_world.clearEndingRequest();
+    EndingType ending = EndingResolver::resolve(m_world.choices());
+    m_cinematic = makeEndingCinematic(ending, &m_world.audio());
+    m_cinematic->start();
+    m_cinematicIsEnding = true;
+    setGameState(GameState::Ending);
+}
+
+void GLView::paintCinematic(float dt, Cinematic* cine) {
+    int pixelW = static_cast<int>(width() * devicePixelRatioF());
+    int pixelH = static_cast<int>(height() * devicePixelRatioF());
+    GLuint targetFbo = defaultFramebufferObject();
+    cine->update(dt);
+    glBindFramebuffer(GL_FRAMEBUFFER, targetFbo);
+    glViewport(0, 0, pixelW, pixelH);
+    glClearColor(0, 0, 0, 1);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    if (QPainter* p = m_overlay.begin()) {
+        cine->render(*p, rect());
+        m_overlay.end();
+        m_overlay.render(this, targetFbo, pixelW, pixelH);
+    }
+    Input::instance().update();
+}
+
+void GLView::stepWorld(float dt) {
+    bool frozen = m_dialogue.active() || m_journalOpen || m_inventoryOpen;
+    while (m_clock.hasStep()) {
+        if (!frozen) {
+            m_world.update(static_cast<float>(m_clock.deltaSim()));
+            // Edge-triggered input (E, F, clicks, mouse delta) must be consumed once per step,
+            // otherwise a 60 fps frame running two 120 Hz steps would toggle a door twice.
+            Input::instance().update();
+        }
+        m_clock.consumeStep();
+    }
+    if (frozen) Input::instance().update();
+
+    auto story = m_world.takeStory();
+    if (!story.empty()) m_dialogue.push(story);
+    int wing = m_world.wingJustEntered();
+    if (wing >= 0) m_hud.showLocation(m_world.map().wings[wing].name);
+    (void)dt;
+}
+
 void GLView::paintGL() {
     m_clock.tick();
-    float dt = static_cast<float>(m_clock.frameTime());
+    float dt = std::min(0.1f, static_cast<float>(m_clock.frameTime()));
     m_totalTime += dt;
 
     int pixelW = static_cast<int>(width() * devicePixelRatioF());
@@ -105,226 +193,150 @@ void GLView::paintGL() {
     GLuint targetFbo = defaultFramebufferObject();
 
     if (m_state == GameState::Menu) {
+        startMenuAmbience();
         m_menuOverlay.update(dt);
-
-        // Render 3D foyer live background directly to target FBO
+        m_world.player().setYaw(-90.0f + std::sin(m_totalTime * 0.25f) * 24.0f);   // slow look-around behind the menu
         m_renderer.render(this, m_world, m_totalTime, targetFbo);
-
-        QPainter* p = m_overlay.begin();
-        if (p) {
-            m_menuOverlay.render(*p, rect(), QFile::exists("save.json"));
+        if (QPainter* p = m_overlay.begin()) {
+            m_menuOverlay.render(*p, rect(), QFile::exists(savePath()));
             m_overlay.end();
             m_overlay.render(this, targetFbo, pixelW, pixelH);
         }
+        Input::instance().update();
         return;
     }
 
-    if (m_state == GameState::Intro) {
-        if (m_introMovie) {
-            bool spaceDown = Input::instance().isKeyDown(Qt::Key_Space);
-            m_introMovie->update(dt, spaceDown);
-
-            glBindFramebuffer(GL_FRAMEBUFFER, targetFbo);
-            glViewport(0, 0, pixelW, pixelH);
-            glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-            QPainter* p = m_overlay.begin();
-            if (p) {
-                m_introMovie->render(*p, rect());
-                drawSubtitles(*p, rect());
-                m_overlay.end();
-                m_overlay.render(this, targetFbo, pixelW, pixelH);
-            }
-
-            if (m_introMovie->isFinished()) {
-                setGameState(GameState::Playing);
+    if (m_state == GameState::Intro || m_state == GameState::Ending) {
+        if (m_cinematic) {
+            paintCinematic(dt, m_cinematic.get());
+            if (m_cinematic->finished()) {
+                if (m_state == GameState::Intro) finishIntro();
+                else setGameState(GameState::Menu);
             }
         }
         return;
     }
 
-    if (m_state == GameState::Ending) {
-        if (m_endingCutscene) {
-            bool spaceDown = Input::instance().isKeyDown(Qt::Key_Space);
-            m_endingCutscene->update(dt, spaceDown);
-
-            glBindFramebuffer(GL_FRAMEBUFFER, targetFbo);
-            glViewport(0, 0, pixelW, pixelH);
-            glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-            QPainter* p = m_overlay.begin();
-            if (p) {
-                m_endingCutscene->render(*p, rect());
-                m_overlay.end();
-                m_overlay.render(this, targetFbo, pixelW, pixelH);
-            }
-
-            if (m_endingCutscene->isFinished()) {
-                setGameState(GameState::Menu);
-            }
-        }
-        return;
-    }
-
-    // GameState::Playing or Paused
     if (m_state == GameState::Playing) {
-        while (m_clock.hasStep()) {
-            m_world.update(static_cast<float>(m_clock.deltaSim()));
-            m_clock.consumeStep();
-        }
-
-        bool hintHeld = Input::instance().isKeyDown(Qt::Key_H);
-        m_journalOverlay.update(dt, hintHeld);
-
-        // Check if player reached all 5 sigils and entered the chapel crypt finale
-        if (m_world.player().sigilsCollected() >= 5 && m_world.player().position().z > 23.0f) {
-            setGameState(GameState::Ending);
+        stepWorld(dt);
+        m_dialogue.update(dt);
+        m_hud.update(dt);
+        m_journalOverlay.update(dt, Input::instance().isKeyDown(Qt::Key_H));
+        if (m_world.endingRequested()) {
+            beginEnding();
             return;
         }
     }
 
-    // Reset single-frame input deltas
-    Input::instance().update();
-
-    // 2. 3D Render Pass into target FBO
     m_renderer.render(this, m_world, m_totalTime, targetFbo);
 
-    // 3. 2D HUD / Overlays Pass via Overlay2D
-    QPainter* p = m_overlay.begin();
-    if (p) {
+    if (QPainter* p = m_overlay.begin()) {
         if (m_world.deathSequence().isActive()) {
-            float blackAlpha = m_world.deathSequence().blackOverlayAlpha();
-            if (blackAlpha > 0.0f) {
-                p->fillRect(rect(), QColor(0, 0, 0, static_cast<int>(blackAlpha * 255)));
-            }
+            float a = m_world.deathSequence().blackOverlayAlpha();
+            if (a > 0.0f) p->fillRect(rect(), QColor(0, 0, 0, static_cast<int>(a * 255)));
         }
-
         if (m_state == GameState::Playing) {
-            if (m_settings.qualityLevel >= 0) { // Render HUD
-                m_hud.draw(*p, rect(), m_world, static_cast<float>(m_clock.fps()));
-            }
-
-            if (m_inventoryOpen) {
-                m_inventoryOverlay.render(*p, rect(), m_world.inventory());
-            }
-
+            float aspect = static_cast<float>(width()) / std::max(1, height());
+            Mat4 viewProj = m_renderer.camera().projMatrix(aspect) * m_renderer.camera().viewMatrix();
+            if (!m_world.deathSequence().isActive())
+                m_hud.draw(*p, rect(), m_world, static_cast<float>(m_clock.fps()), viewProj, m_totalTime, m_debugConsole.showDebugOverlay());
+            if (m_inventoryOpen) m_inventoryOverlay.render(*p, rect(), m_world.inventory());
             if (m_journalOpen) {
+                m_journalOverlay.setObjective(m_world.objective().title + ". " + m_world.objective().detail);
                 m_journalOverlay.render(*p, rect(), m_world.journal(), m_world.activeWing());
             }
-
-            if (m_world.mercy().isActive()) {
-                m_rhythmOverlay.render(*p, rect(), m_world.mercy());
-            }
-
+            if (m_world.mercy().isActive()) m_rhythmOverlay.render(*p, rect(), m_world.mercy());
             m_debugConsole.render(*p, rect(), m_world, static_cast<float>(m_clock.fps()));
+            m_dialogue.render(*p, rect(), m_totalTime);
         } else if (m_state == GameState::Paused) {
             m_pauseOverlay.render(*p, rect());
         }
-
-        // Subtitles on top
-        if (m_settings.subtitles) {
-            drawSubtitles(*p, rect());
-        }
-
+        if (m_settings.subtitles && !m_dialogue.active()) drawSubtitles(*p, rect());
         m_overlay.end();
         m_overlay.render(this, targetFbo, pixelW, pixelH);
     }
+    if (m_state != GameState::Playing) Input::instance().update();
 }
 
 void GLView::drawSubtitles(QPainter& p, const QRect& bounds) {
     auto& subs = SubtitleSystem::instance();
     if (!subs.hasActive()) return;
-
     float alpha = subs.alpha();
     if (alpha <= 0.01f) return;
 
-    int cx = bounds.width() / 2;
-    int cy = bounds.height() - 75;
-
-    QString fullText = subs.currentSpeaker().isEmpty() ? subs.currentText() : QString("%1: %2").arg(subs.currentSpeaker()).arg(subs.currentText());
-
-    QFont subFont("Georgia", 13, QFont::Normal);
-    p.setFont(subFont);
-
-    QFontMetrics fm(subFont);
-    int textW = fm.horizontalAdvance(fullText) + 32;
-    int textH = 34;
-
-    QRect bgRect(cx - textW / 2, cy - textH / 2, textW, textH);
+    QString speaker = subs.currentSpeaker();
+    QString full = speaker.isEmpty() ? subs.currentText() : QString("%1: %2").arg(speaker).arg(subs.currentText());
+    int shown = std::min(static_cast<int>(full.size()), static_cast<int>(subs.elapsed() * 55.0f));   // typewriter reveal
+    p.save();
+    QFont f("Georgia");
+    f.setPixelSize(20);
+    f.setItalic(true);
+    p.setFont(f);
+    QFontMetrics fm(f);
+    int w = fm.horizontalAdvance(full) + 36;
+    QRect bg(bounds.center().x() - w / 2, bounds.bottom() - 120, w, 38);
     p.setPen(Qt::NoPen);
     p.setBrush(QColor(0, 0, 0, static_cast<int>(180 * alpha)));
-    p.drawRoundedRect(bgRect, 4, 4);
-
+    p.drawRoundedRect(bg, 5, 5);
     QColor col = subs.currentColor();
     col.setAlpha(static_cast<int>(255 * alpha));
     p.setPen(col);
-    p.drawText(bgRect, Qt::AlignCenter, fullText);
+    p.drawText(bg.adjusted(18, 0, 0, 0), Qt::AlignVCenter | Qt::AlignLeft, full.left(shown));
+    p.restore();
 }
 
 void GLView::keyPressEvent(QKeyEvent* event) {
-    if (event->key() == Qt::Key_Escape) {
+    const int key = event->key();
+    if (event->isAutoRepeat()) { event->accept(); return; }
+
+    if (m_state == GameState::Intro || m_state == GameState::Ending) {
+        if (m_cinematic) {
+            if (key == Qt::Key_Escape) { m_cinematic->skip(); }
+            else if (key == Qt::Key_Space || key == Qt::Key_Return || key == Qt::Key_Enter || key == Qt::Key_Right || key == Qt::Key_Down || key == Qt::Key_E) m_cinematic->onAdvanceKey();
+        }
+        event->accept();
+        return;
+    }
+
+    if (key == Qt::Key_Escape) {
         if (m_state == GameState::Playing) {
-            if (m_journalOpen) {
-                m_journalOpen = false;
-            } else if (m_inventoryOpen) {
-                m_inventoryOpen = false;
-            } else {
-                setGameState(GameState::Paused);
-            }
-            return;
+            if (m_journalOpen) m_journalOpen = false;
+            else if (m_inventoryOpen) m_inventoryOpen = false;
+            else setGameState(GameState::Paused);
         } else if (m_state == GameState::Paused) {
             setGameState(GameState::Playing);
-            return;
         }
+        event->accept();
+        return;
     }
 
     if (m_state == GameState::Playing) {
-        if (event->key() == Qt::Key_Tab) {
-            m_journalOpen = !m_journalOpen;
+        if (m_dialogue.active()) {
+            if (key == Qt::Key_Space || key == Qt::Key_Return || key == Qt::Key_Enter || key == Qt::Key_E) m_dialogue.advance();
+            event->accept();
             return;
         }
-        if (event->key() == Qt::Key_I) {
-            m_inventoryOpen = !m_inventoryOpen;
-            return;
-        }
-        if (event->key() >= Qt::Key_1 && event->key() <= Qt::Key_6) {
-            int slot = event->key() - Qt::Key_1;
-            m_inventoryOverlay.selectSlot(slot);
-            return;
-        }
-
-        // Debug shortcuts
-        if (event->key() == Qt::Key_F3) {
-            m_debugConsole.toggleDebugOverlay();
-            return;
-        }
-        if (event->key() == Qt::Key_F4) {
-            m_debugConsole.toggleNoclip();
-            return;
-        }
-        if (event->key() == Qt::Key_F5) {
-            m_debugConsole.giveAllItems(m_world);
-            return;
-        }
-
+        if (key == Qt::Key_Tab) { m_journalOpen = !m_journalOpen; m_world.audio().playUi(2); return; }
+        if (key == Qt::Key_I) { m_inventoryOpen = !m_inventoryOpen; return; }
+        if (key == Qt::Key_M) { m_hud.toggleMap(); return; }
+        if (key >= Qt::Key_1 && key <= Qt::Key_6) { m_inventoryOverlay.selectSlot(key - Qt::Key_1); return; }
+        if (key == Qt::Key_F3) { m_debugConsole.toggleDebugOverlay(); return; }
+        if (key == Qt::Key_F5) { m_debugConsole.giveAllItems(m_world); return; }
+        if (key == Qt::Key_F6) { m_debugConsole.teleportToObjective(m_world); return; }
+        if (key == Qt::Key_F8) { m_debugConsole.summonGhosts(m_world); return; }
+        if (key == Qt::Key_F7) { m_debugConsole.unlockAllDoors(m_world); return; }
         if (m_journalOpen) {
-            if (event->key() == Qt::Key_Up) {
-                m_journalOverlay.prevNote();
-                return;
-            } else if (event->key() == Qt::Key_Down) {
-                m_journalOverlay.nextNote();
-                return;
-            }
+            if (key == Qt::Key_Up) { m_journalOverlay.prevNote(); return; }
+            if (key == Qt::Key_Down) { m_journalOverlay.nextNote(); return; }
         }
     }
 
-    Input::instance().onKeyPressed(event->key());
+    Input::instance().onKeyPressed(key);
     event->accept();
 }
 
 void GLView::keyReleaseEvent(QKeyEvent* event) {
+    if (event->isAutoRepeat()) { event->accept(); return; }
     Input::instance().onKeyReleased(event->key());
     event->accept();
 }
@@ -332,21 +344,36 @@ void GLView::keyReleaseEvent(QKeyEvent* event) {
 void GLView::mouseMoveEvent(QMouseEvent* event) {
     if (m_state == GameState::Menu) {
         m_menuOverlay.onMouseMove(event->pos());
+        if (m_menuOverlay.hoveredIndex() != m_menuHover) {
+            m_menuHover = m_menuOverlay.hoveredIndex();
+            if (m_menuHover >= 0) m_world.audio().playUi(0);
+        }
         return;
     }
     if (m_state == GameState::Paused) {
         m_pauseOverlay.onMouseMove(event->pos());
+        if (m_pauseOverlay.hoveredIndex() != m_pauseHover) {
+            m_pauseHover = m_pauseOverlay.hoveredIndex();
+            if (m_pauseHover >= 0) m_world.audio().playUi(0);
+        }
         return;
     }
-
+    if ((m_state == GameState::Intro || m_state == GameState::Ending) && m_cinematic) {
+        m_cinematic->onMouseMove(event->pos(), rect());
+        return;
+    }
     if (!m_cursorCaptured) return;
 
     QPoint center(width() / 2, height() / 2);
+    if (m_ignoreNextMove) {      // the synthetic move generated by re-centring the cursor
+        m_ignoreNextMove = false;
+        if (event->pos() == center) return;
+    }
     int dx = event->pos().x() - center.x();
     int dy = event->pos().y() - center.y();
-
     if (dx != 0 || dy != 0) {
         Input::instance().onMouseMove(dx, dy);
+        m_ignoreNextMove = true;
         QCursor::setPos(mapToGlobal(center));
     }
     event->accept();
@@ -355,22 +382,30 @@ void GLView::mouseMoveEvent(QMouseEvent* event) {
 void GLView::mousePressEvent(QMouseEvent* event) {
     if (m_state == GameState::Menu) {
         MenuAction act = m_menuOverlay.onMouseClick(event->pos());
+        if (act != MenuAction::None) m_world.audio().playUi(1);
         if (act == MenuAction::NewGame) {
-            setGameState(GameState::Intro);
+            startNewGame();
         } else if (act == MenuAction::Continue) {
             SaveData data;
-            if (SaveGame::loadFromFile("save.json", data)) {
-                m_world.player().spawn(data.playerPos);
-                m_world.player().refillOil(data.lanternOil);
-                m_world.sanity().setSanity(data.sanity);
+            if (SaveGame::loadFromFile(savePath().toStdString(), data)) {
+                makeCurrent();   // rebuilding the manor uploads GPU meshes
+                m_world.applySave(data);
+                doneCurrent();
+                applySettings();
+                m_hud.resetSession();
+                m_dialogue.clear();
+                setGameState(GameState::Playing);
             }
-            setGameState(GameState::Playing);
         } else if (act == MenuAction::Settings) {
             SettingsDialog dlg(m_settings, this);
             dlg.exec();
+            applySettings();
         } else if (act == MenuAction::Credits) {
-            m_world.choices().sparedAda = true;
-            m_world.choices().sparedEli = true;
+            m_cinematic = makeEndingCinematic(EndingType::E1_Release, &m_world.audio(), true);
+            m_cinematic->start();
+            m_cinematicIsEnding = true;
+            m_world.audio().stopBed(104, 1.0f);
+            m_world.audio().stopBed(105, 1.0f);
             setGameState(GameState::Ending);
         } else if (act == MenuAction::Quit) {
             QApplication::quit();
@@ -378,29 +413,32 @@ void GLView::mousePressEvent(QMouseEvent* event) {
         return;
     }
 
+    if ((m_state == GameState::Intro || m_state == GameState::Ending) && m_cinematic) {
+        m_cinematic->onClick(event->pos(), rect());
+        return;
+    }
+
     if (m_state == GameState::Paused) {
         PauseAction act = m_pauseOverlay.onMouseClick(event->pos());
+        if (act != PauseAction::None) m_world.audio().playUi(1);
         if (act == PauseAction::Resume) {
             setGameState(GameState::Playing);
         } else if (act == PauseAction::Settings) {
             SettingsDialog dlg(m_settings, this);
             dlg.exec();
+            applySettings();
         } else if (act == PauseAction::Save) {
-            SaveData data;
-            data.playerPos = m_world.player().position();
-            data.playerYaw = m_world.player().yaw();
-            data.playerPitch = m_world.player().pitch();
-            data.lanternOil = m_world.player().lantern().oil();
-            data.sanity = m_world.sanity().sanity();
-            SaveGame::saveToFile("save.json", data);
-            SubtitleSystem::instance().show("Hollowmere", "Game checkpoint saved.", 2.5f);
+            SaveGame::saveToFile(savePath().toStdString(), m_world.makeSave());
+            SubtitleSystem::instance().show("Hollowmere", "Checkpoint saved.", 2.5f);
             setGameState(GameState::Playing);
         } else if (act == PauseAction::LoadLastCheckpoint) {
             SaveData data;
-            if (SaveGame::loadFromFile("save.json", data)) {
-                m_world.player().spawn(data.playerPos);
-                m_world.player().refillOil(data.lanternOil);
-                m_world.sanity().setSanity(data.sanity);
+            if (SaveGame::loadFromFile(savePath().toStdString(), data)) {
+                makeCurrent();
+                m_world.applySave(data);
+                doneCurrent();
+                applySettings();
+                m_dialogue.clear();
                 SubtitleSystem::instance().show("Hollowmere", "Checkpoint loaded.", 2.5f);
             }
             setGameState(GameState::Playing);
@@ -410,6 +448,12 @@ void GLView::mousePressEvent(QMouseEvent* event) {
         return;
     }
 
+    // Playing
+    if (m_dialogue.active()) {
+        m_dialogue.advance();
+        event->accept();
+        return;
+    }
     if (!m_cursorCaptured) {
         setCursorCaptured(true);
         return;
@@ -425,9 +469,7 @@ void GLView::mouseReleaseEvent(QMouseEvent* event) {
 
 void GLView::focusOutEvent(QFocusEvent* event) {
     Input::instance().onFocusLost();
-    if (m_state == GameState::Playing) {
-        setGameState(GameState::Paused);
-    }
+    if (m_state == GameState::Playing) setGameState(GameState::Paused);
     QOpenGLWidget::focusOutEvent(event);
 }
 

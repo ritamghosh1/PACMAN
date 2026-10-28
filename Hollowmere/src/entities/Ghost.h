@@ -45,6 +45,12 @@ public:
                         const NavGrid* nav = nullptr) = 0;
 
     GhostType type() const { return m_type; }
+    // Called instead of update() while the player is far away / in another wing.
+    void setDormant() { m_distToPlayer = 999.0f; m_telegraphTimer = 0.0f; m_agitation = 0.0f; }
+    virtual void setPatrolRoute(const std::vector<Vec3>&) {}
+    void resetToHome(const Vec3& home) {
+        m_position = home; m_targetPos = home; m_state = GhostState::Patrol; m_currentPath.clear(); m_pathIndex = 0; m_dissolve = 0.0f;
+    }
     GhostVisualType visualType() const { return m_visualType; }
     GhostState state() const { return m_state; }
 

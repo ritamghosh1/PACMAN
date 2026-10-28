@@ -10,6 +10,20 @@
 
 namespace hm {
 
+struct PickupEvent {
+    PickupType type;
+    int tag = 0;
+    QString name;
+    QString description;
+    Vec3 position;
+};
+
+struct DoorEvent {
+    enum Kind { Opened, Closed, Unlocked, Locked } kind;
+    Vec3 position;
+    int keyId = 0;
+};
+
 enum class HealthState {
     Healthy,
     Wounded,
@@ -21,7 +35,7 @@ class Player {
 public:
     Player();
 
-    void spawn(const Vec3& pos);
+    void spawn(const Vec3& pos, float yawDeg = -90.0f);
     void update(float dt, Collision& collision, std::vector<Door>& doors, std::vector<Pickup>& pickups);
 
     const Vec3& position() const { return m_position; }
@@ -47,7 +61,17 @@ public:
     void refillOil(float amount) { m_lantern.addOil(amount); }
     int sigilsCollected() const { return m_sigilCount; }
     void collectSigil() { m_sigilCount++; }
-    bool hasBrassKey() const { return (m_keyFlags & 1) != 0; }
+    bool hasKey(int keyId) const { return (m_keyFlags & (1 << keyId)) != 0; }
+    void setKeyFlags(int f) { m_keyFlags = f; }
+    void setSigilCount(int n) { m_sigilCount = n; }
+    void setYaw(float y) { m_yaw = y; }
+    void setMouseSensitivity(float s) { m_mouseSens = s; }
+    void setInvertY(bool v) { m_invertY = v; }
+    bool canInteract() const { return !m_currentPrompt.isEmpty(); }
+    std::vector<PickupEvent> takePickupEvents() { auto e = std::move(m_pickupEvents); m_pickupEvents.clear(); return e; }
+    std::vector<DoorEvent> takeDoorEvents() { auto e = std::move(m_doorEvents); m_doorEvents.clear(); return e; }
+    void setInteractionEnabled(bool v) { m_interactionEnabled = v; }
+    Vec3 forward() const;
 
     Lantern& lantern() { return m_lantern; }
     const Lantern& lantern() const { return m_lantern; }
@@ -100,6 +124,11 @@ private:
     int m_sigilCount = 0;
     int m_bandageCount = 0;
 
+    float m_mouseSens = 0.12f;
+    bool m_invertY = false;
+    bool m_interactionEnabled = true;
+    std::vector<PickupEvent> m_pickupEvents;
+    std::vector<DoorEvent> m_doorEvents;
     QString m_currentPrompt;
     QString m_notificationToast;
     float m_toastTimer = 0.0f;
