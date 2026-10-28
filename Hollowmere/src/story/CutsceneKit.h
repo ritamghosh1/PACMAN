@@ -28,6 +28,8 @@ inline void fillAll(QPainter& p, const QColor& c) { p.fillRect(QRectF(-200, -200
 
 // The windscreen drive from the intro, reused by the "endless drive" ending.
 void drawDrive(QPainter& p, const ShotContext& c);
+// The locked, burning nursery door from the intro (reused by Eli's memory).
+void drawDoorScene(QPainter& p, const ShotContext& c);
 
 } // namespace scenekit
 } // namespace hm

@@ -9,7 +9,7 @@ int main(int argc, char* argv[]) {
     format.setProfile(QSurfaceFormat::CoreProfile);
     format.setDepthBufferSize(24);
     format.setStencilBufferSize(8);
-    format.setSamples(4); // 4x MSAA
+    format.setSamples(0); // the scene is drawn into an off-screen FBO, so window MSAA only costs fill rate
     format.setSwapInterval(1); // VSync
     QSurfaceFormat::setDefaultFormat(format);
 

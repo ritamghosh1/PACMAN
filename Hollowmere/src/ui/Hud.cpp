@@ -1,4 +1,5 @@
 #include "Hud.h"
+#include "FontCache.h"
 #include <QFont>
 #include <QPainterPath>
 #include <algorithm>
@@ -7,13 +8,7 @@
 namespace hm {
 
 namespace {
-QFont serif(int px, bool bold = false, bool italic = false) {
-    QFont f("Georgia");
-    f.setPixelSize(px);
-    f.setBold(bold);
-    f.setItalic(italic);
-    return f;
-}
+const QFont& serif(int px, bool bold = false, bool italic = false) { return cachedFont("Georgia", px, bold, italic); }
 const QColor kGold(235, 205, 140);
 } // namespace
 
@@ -59,7 +54,7 @@ void Hud::draw(QPainter& p, const QRect& bounds, const World& world, float fps, 
     }
     if (showDebug) {
         p.setPen(QColor(140, 140, 150, 200));
-        p.setFont(QFont("Courier New", 10));
+        p.setFont(cachedFont("Courier New", 13));
         p.drawText(w - 110, h - 80, QString("FPS: %1").arg(static_cast<int>(fps)));
     }
     p.restore();
@@ -81,7 +76,7 @@ void Hud::drawCrosshair(QPainter& p, int cx, int cy, bool hasPrompt) {
 
 void Hud::drawPrompts(QPainter& p, int cx, int cy, const QString& prompt, const QString& toast, float toastTimer) {
     if (!prompt.isEmpty()) {
-        QFont font = serif(20, true);
+        const QFont& font = serif(20, true);
         p.setFont(font);
         QFontMetrics fm(font);
         int textW = fm.horizontalAdvance(prompt);
@@ -94,7 +89,7 @@ void Hud::drawPrompts(QPainter& p, int cx, int cy, const QString& prompt, const 
     }
     if (toastTimer > 0.0f && !toast.isEmpty()) {
         int a = static_cast<int>(std::clamp(toastTimer * 200.0f, 0.0f, 255.0f));
-        QFont font = serif(18, false, true);
+        const QFont& font = serif(18, false, true);
         p.setFont(font);
         QFontMetrics fm(font);
         int textW = fm.horizontalAdvance(toast);
@@ -159,8 +154,8 @@ void Hud::drawStatus(QPainter& p, int x, int y, const World& world) {
 void Hud::drawObjective(QPainter& p, int x, int y, const World& world) {
     const ObjectiveInfo& o = world.objective();
     int boxW = 430;
-    QFontMetrics tfm(serif(21, true));
-    QFontMetrics dfm(serif(15, false, true));
+    static const QFontMetrics tfm(serif(21, true));
+    static const QFontMetrics dfm(serif(15, false, true));
     QRect detailRect(x + 16, y + 56, boxW - 32, 52);
     QRect det = dfm.boundingRect(detailRect, Qt::TextWordWrap, o.detail);
     int boxH = 74 + det.height() + 34;
@@ -168,9 +163,7 @@ void Hud::drawObjective(QPainter& p, int x, int y, const World& world) {
     p.setBrush(QColor(8, 8, 12, 175));
     p.drawRoundedRect(QRect(x, y, boxW, boxH), 8, 8);
     p.setFont(serif(12, true));
-    QFont lab = serif(12, true);
-    lab.setLetterSpacing(QFont::AbsoluteSpacing, 3.0);
-    p.setFont(lab);
+    p.setFont(cachedFont("Georgia", 12, true, false, 3.0));
     p.setPen(QColor(235, 205, 140, 220));
     p.drawText(x + 16, y + 24, "OBJECTIVE");
     p.setFont(serif(21, true));
@@ -258,25 +251,34 @@ void Hud::drawMinimap(QPainter& p, const QRect& b, const World& world, float tim
     p.setPen(QPen(QColor(235, 205, 140, 90), 1.2));
     p.setBrush(QColor(6, 6, 10, 190));
     p.drawRoundedRect(QRect(x0 - 8, y0 - 8, mw + 16, mh + 36), 6, 6);
-    p.setPen(Qt::NoPen);
-    const auto& ex = world.explored();
-    for (int r = 0; r < map.gridH; ++r)
-        for (int c = 0; c < map.gridW; ++c) {
-            if (!ex[r * map.gridW + c]) continue;
-            char t = map.grid[r][c];
-            QColor col = t == '#' ? QColor(38, 36, 40) : QColor(112, 100, 86);
-            if (t == 'L') col = QColor(210, 70, 60);
-            else if (t == 'D') col = QColor(200, 160, 80);
-            p.setBrush(col);
-            p.drawRect(x0 + c * cell, y0 + r * cell, cell, cell);
+    // The static part of the map (walls, floors, doors) only changes when you explore or open a door,
+    // so it is rasterised into an image once instead of ~1700 rects every frame.
+    int doorSig = 0;
+    for (const auto& d : map.doors) doorSig = doorSig * 3 + (d.isLocked() ? 2 : (d.isOpen() ? 1 : 0));
+    if (m_mapImage.isNull() || m_mapVersion != world.exploredVersion() || m_mapDoorSig != doorSig) {
+        m_mapVersion = world.exploredVersion();
+        m_mapDoorSig = doorSig;
+        m_mapImage = QImage(mw, mh, QImage::Format_ARGB32_Premultiplied);
+        m_mapImage.fill(Qt::transparent);
+        QPainter ip(&m_mapImage);
+        ip.setPen(Qt::NoPen);
+        const auto& ex = world.explored();
+        for (int r = 0; r < map.gridH; ++r)
+            for (int c = 0; c < map.gridW; ++c) {
+                if (!ex[r * map.gridW + c]) continue;
+                char t = map.grid[r][c];
+                ip.setBrush(t == '#' ? QColor(38, 36, 40) : QColor(112, 100, 86));
+                ip.drawRect(c * cell, r * cell, cell, cell);
+            }
+        for (const auto& d : map.doors) {
+            int c, r;
+            if (!map.worldToCell(d.position(), c, r) || !ex[r * map.gridW + c]) continue;
+            ip.setBrush(d.isLocked() ? QColor(210, 70, 60) : (d.isOpen() ? QColor(110, 190, 120) : QColor(200, 160, 80)));
+            ip.drawRect(c * cell, r * cell, cell, cell);
         }
-    // Doors that have been opened turn green
-    for (const auto& d : map.doors) {
-        int c, r;
-        if (!map.worldToCell(d.position(), c, r) || !ex[r * map.gridW + c]) continue;
-        p.setBrush(d.isLocked() ? QColor(210, 70, 60) : (d.isOpen() ? QColor(110, 190, 120) : QColor(200, 160, 80)));
-        p.drawRect(x0 + c * cell, y0 + r * cell, cell, cell);
     }
+    p.drawImage(x0, y0, m_mapImage);
+    p.setPen(Qt::NoPen);
     auto toMap = [&](const Vec3& v) { return QPointF(x0 + (v.x - map.origin.x) / map.cellSize * cell, y0 + (v.z - map.origin.z) / map.cellSize * cell); };
     // Objective star
     const ObjectiveInfo& o = world.objective();
@@ -314,8 +316,7 @@ void Hud::drawBanner(QPainter& p, const QRect& b) {
     if (m_bannerTime > 6.0f) return;
     int n = std::min(static_cast<int>(m_bannerTime / 0.06f), m_bannerText.size());
     float a = m_bannerTime < 4.5f ? 1.0f : std::max(0.0f, (6.0f - m_bannerTime) / 1.5f);
-    QFont f = serif(46, true);
-    f.setLetterSpacing(QFont::AbsoluteSpacing, 10.0);
+    const QFont& f = cachedFont("Georgia", 46, true, false, 10.0);
     p.save();
     p.setFont(f);
     int y = b.height() * 0.30;

@@ -8,7 +8,10 @@ class MercySystem {
 public:
     MercySystem();
 
-    void update(float dt);
+    // Humming only does something while Ada is within earshot; the panel is visible only then.
+    void update(float dt, bool humHeld, bool adaNear);
+    // Returns 1 on a good tap, 2 on a miss, 0 when the mini-game is not active.
+    int tap();
 
     // Mini-game 1: Hum Lullaby (Ada)
     void startHum();
@@ -31,7 +34,7 @@ public:
     void setActive(bool active) { m_active = active; }
     float needlePos() const { return m_needle; }
     int successCount() const { return m_humSuccessCount; }
-    int requiredSuccesses() const { return 4; }
+    int requiredSuccesses() const { return 3; }
 
 private:
     bool m_active = false;

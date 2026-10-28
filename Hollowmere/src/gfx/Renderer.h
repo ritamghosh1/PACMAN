@@ -22,6 +22,10 @@ public:
     void render(QOpenGLFunctions_3_3_Core* gl, World& world, float totalTime, GLuint targetFbo = 0);
     void destroy(QOpenGLFunctions_3_3_Core* gl);
 
+    // 0 = Low (half-res, no shadows, 4 lights), 1 = Medium, 2 = High (native res, shadows, 12 lights)
+    void setQuality(QOpenGLFunctions_3_3_Core* gl, int level);
+    int quality() const { return m_quality; }
+
     Camera& camera() { return m_camera; }
     const Camera& camera() const { return m_camera; }
 
@@ -66,6 +70,11 @@ private:
     float m_lastTime = 0.0f;
     Mesh m_lanternModelMesh;
 
+    int m_quality = 1;
+    float m_renderScale = 0.75f;
+    int m_maxLights = 8;
+    bool m_shadowsOn = true;
+    int m_shadowRes = 0;
     int m_width = 1280;
     int m_height = 720;
 };

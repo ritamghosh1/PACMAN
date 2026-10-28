@@ -9,7 +9,9 @@ enum class GameState {
     Playing,
     Paused,
     Dead,
-    Ending
+    Ending,
+    Memory,     // animated flashback after a sigil
+    Story       // menu: story overview and endings gallery
 };
 
 } // namespace hm

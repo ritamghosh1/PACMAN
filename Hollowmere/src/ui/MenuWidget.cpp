@@ -19,7 +19,7 @@ void MenuOverlay::init(const QRect& bounds) {
     m_buttons.push_back({"CONTINUE", MenuAction::Continue, QRect(btnX, startY, btnW, btnH), false});
     m_buttons.push_back({"NEW GAME", MenuAction::NewGame, QRect(btnX, startY + (btnH + gap), btnW, btnH), false});
     m_buttons.push_back({"SETTINGS", MenuAction::Settings, QRect(btnX, startY + (btnH + gap) * 2, btnW, btnH), false});
-    m_buttons.push_back({"CREDITS", MenuAction::Credits, QRect(btnX, startY + (btnH + gap) * 3, btnW, btnH), false});
+    m_buttons.push_back({"STORY & ENDINGS", MenuAction::Credits, QRect(btnX, startY + (btnH + gap) * 3, btnW, btnH), false});
     m_buttons.push_back({"QUIT TO DESKTOP", MenuAction::Quit, QRect(btnX, startY + (btnH + gap) * 4, btnW, btnH), false});
 }
 

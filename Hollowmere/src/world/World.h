@@ -87,8 +87,11 @@ public:
     void queueIntroBriefing();
 
     const ObjectiveInfo& objective() const { return m_objective; }
+    int takeMemory() { int m = m_pendingMemory; m_pendingMemory = 0; return m; }   // sigil number whose flashback should play (0 = none)
+    QString storyRecap() const;
     QString interactionPrompt() const { return m_extraPrompt.isEmpty() ? m_player.currentPrompt() : m_extraPrompt; }
     const std::vector<bool>& explored() const { return m_explored; }
+    int exploredVersion() const { return m_exploredVersion; }
     bool endingRequested() const { return m_endingRequested; }
     void clearEndingRequest() { m_endingRequested = false; }
     bool wardenActive() const { return m_wardenActive; }
@@ -133,7 +136,9 @@ private:
     ObjectiveInfo m_objective;
     QString m_extraPrompt;
     std::vector<bool> m_explored;
+    int m_pendingMemory = 0;
     int m_visitedMask = 0;
+    int m_exploredVersion = 0;
     int m_activeWing = 0;
     int m_pendingWingBanner = -1;
     bool m_inSafe = false;

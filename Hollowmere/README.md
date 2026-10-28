@@ -191,3 +191,10 @@ Hollowmere/
 - **Colour-coded wings.** Library (timber), Conservatory (green), Boiler Cellar (iron blue), Nursery (pink), Chapel (blood stone). Each shows a typed location banner when you enter.
 - **Safe rooms.** The foyer and the candle-lit entrance of every wing: ghosts cannot hurt you there.
 - Fixed in this version: edge-triggered input (E / F / clicks) fired twice per frame so doors and the lantern appeared not to work; doors now fit their doorways and swing; ghosts used a wrong forward vector; navigation covered only a fraction of the map; Continue/Load rebuilt the level without a GL context.
+
+### v2.1 changes
+- **Performance:** the project now always builds an optimised binary (`CONFIG += release`; on macOS a plain `make` used to build an unoptimised debug binary). The 3D scene no longer needs window MSAA, the HUD is rasterised at logical resolution, fonts are cached and the minimap is drawn from a cached image.
+- **Graphics quality now does something** (Settings): Low = half resolution, no shadows, 4 lights; Medium (default) = 3/4 resolution, soft shadows, 8 lights; High = native resolution, 12 lights. It applies immediately.
+- **Humming to Ada** is a real mini-game: stand within earshot, hold H, then click or press Space when the marker is in the green. The panel only shows while it can work.
+- **Story clarity:** animated memory flashbacks after each sigil explain who the ghost was; the objective panel says why each item matters; the pause screen shows "The story so far".
+- **Demo mode:** the old Credits slot is now **STORY & ENDINGS**: a readable summary of the story and how it plays, all five endings with how to reach each, and buttons to watch the intro and any ending. Endings finish on a summary of all five instead of credits.

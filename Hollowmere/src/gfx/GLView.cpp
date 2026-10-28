@@ -1,5 +1,6 @@
 #include "GLView.h"
 #include "core/Input.h"
+#include "ui/FontCache.h"
 #include "story/Subtitles.h"
 #include "save/SaveGame.h"
 #include <QApplication>
@@ -59,6 +60,58 @@ void GLView::applySettings() {
     m_renderer.camera().setFov(m_settings.fov);
 }
 
+void GLView::startMemory(int sigil) {
+    m_cinematic = makeMemoryCinematic(sigil, &m_world.audio());
+    m_cinematic->start();
+    m_returnToStory = false;
+    setGameState(GameState::Memory);
+}
+
+void GLView::openStory() {
+    m_storyBrowser.init(rect());
+    m_storyBrowser.reset();
+    setGameState(GameState::Story);
+}
+
+void GLView::startStoryMovie(bool intro, int ending) {
+    m_world.audio().stopBed(104, 1.0f);
+    m_world.audio().stopBed(105, 1.0f);
+    m_cinematic = intro ? makeIntroCinematic(&m_world.audio()) : makeEndingCinematic(static_cast<EndingType>(ending), &m_world.audio());
+    m_cinematic->start();
+    m_returnToStory = true;
+    setGameState(intro ? GameState::Intro : GameState::Ending);
+}
+
+void GLView::drawPauseRecap(QPainter& p) {
+    p.save();
+    QRect box(40, 60, 420, rect().height() - 120);
+    p.setPen(QPen(QColor(235, 205, 140, 90), 1.2));
+    p.setBrush(QColor(8, 8, 12, 215));
+    p.drawRoundedRect(box, 8, 8);
+    p.setPen(QColor(235, 205, 140));
+    p.setFont(cachedFont("Georgia", 15, true, false, 3.0));
+    p.drawText(box.adjusted(18, 14, -18, 0), Qt::AlignTop | Qt::AlignLeft, "THE STORY SO FAR");
+    p.setPen(QColor(222, 216, 206));
+    p.setFont(cachedFont("Georgia", 16));
+    p.drawText(box.adjusted(18, 46, -18, -14), Qt::TextWordWrap | Qt::AlignTop | Qt::AlignLeft, m_world.storyRecap());
+    p.restore();
+}
+
+void GLView::humTap() {
+    int r = m_world.mercy().tap();
+    static const std::vector<int16_t> note = cinesfx::musicBoxNote(880.0f, 1.2f);
+    if (r == 1) m_world.audio().playCine(note, 0.8f);
+    else if (r == 2) m_world.audio().playUi(1);
+    if (m_world.mercy().isAdaPacified()) m_world.queueStory(Speaker::Ada, "...Nora? You kept the song. Thank you for staying.");
+}
+
+void GLView::applyQuality() {
+    makeCurrent();   // quality changes reallocate GPU render targets
+    applySettings();
+    m_renderer.setQuality(this, m_settings.qualityLevel);
+    doneCurrent();
+}
+
 void GLView::startMenuAmbience() {
     if (m_menuAmbienceOn || !cinesfx::Bank::ready()) return;
     const auto& b = cinesfx::Bank::get();
@@ -71,8 +124,9 @@ void GLView::setGameState(GameState state) {
     GameState prev = m_state;
     m_state = state;
     setCursorCaptured(state == GameState::Playing);
-    if (state == GameState::Menu) {
-        m_cinematic.reset();
+    if (state == GameState::Story && prev != GameState::Menu) m_menuAmbienceOn = false;   // beds were stopped by a movie
+    if (state == GameState::Menu || state == GameState::Story) {
+        if (state == GameState::Menu) m_cinematic.reset();
         if (prev != GameState::Menu) m_menuAmbienceOn = false;   // re-arm so the beds restart
         m_world.audio().setGameplayMuted(false);
     }
@@ -92,7 +146,7 @@ void GLView::initializeGL() {
     int pixelH = static_cast<int>(height() * devicePixelRatioF());
 
     m_renderer.init(this, pixelW, pixelH);
-    m_overlay.init(this, pixelW, pixelH, devicePixelRatioF());
+    m_overlay.init(this, width(), height(), 1.0);   // HUD is rasterised at logical size (4x cheaper on Retina) and scaled up by the GPU
     m_world.init(this);
     m_dialogue.setAudio(&m_world.audio());
 
@@ -101,6 +155,7 @@ void GLView::initializeGL() {
     m_journalOverlay.init(rect());
     m_inventoryOverlay.init(rect());
     applySettings();
+    m_renderer.setQuality(this, m_settings.qualityLevel);
 
     m_clock.reset();
     setGameState(GameState::Menu);
@@ -110,7 +165,7 @@ void GLView::resizeGL(int w, int h) {
     int pixelW = static_cast<int>(w * devicePixelRatioF());
     int pixelH = static_cast<int>(h * devicePixelRatioF());
     m_renderer.resize(this, pixelW, pixelH);
-    m_overlay.resize(this, pixelW, pixelH, devicePixelRatioF());
+    m_overlay.resize(this, w, h, 1.0);
     m_menuOverlay.init(rect());
     m_pauseOverlay.init(rect());
     m_journalOverlay.init(rect());
@@ -143,6 +198,7 @@ void GLView::beginEnding() {
     m_cinematic = makeEndingCinematic(ending, &m_world.audio());
     m_cinematic->start();
     m_cinematicIsEnding = true;
+    m_returnToStory = false;
     setGameState(GameState::Ending);
 }
 
@@ -206,11 +262,27 @@ void GLView::paintGL() {
         return;
     }
 
-    if (m_state == GameState::Intro || m_state == GameState::Ending) {
+    if (m_state == GameState::Story) {
+        startMenuAmbience();
+        m_storyBrowser.update(dt);
+        m_world.player().setYaw(-90.0f + std::sin(m_totalTime * 0.25f) * 24.0f);
+        m_renderer.render(this, m_world, m_totalTime, targetFbo);
+        if (QPainter* p = m_overlay.begin()) {
+            m_storyBrowser.render(*p, rect(), m_totalTime);
+            m_overlay.end();
+            m_overlay.render(this, targetFbo, pixelW, pixelH);
+        }
+        Input::instance().update();
+        return;
+    }
+
+    if (inCinematic()) {
         if (m_cinematic) {
             paintCinematic(dt, m_cinematic.get());
             if (m_cinematic->finished()) {
-                if (m_state == GameState::Intro) finishIntro();
+                if (m_returnToStory) { m_returnToStory = false; m_cinematic.reset(); m_storyBrowser.init(rect()); setGameState(GameState::Story); }
+                else if (m_state == GameState::Intro) finishIntro();
+                else if (m_state == GameState::Memory) { m_cinematic.reset(); setGameState(GameState::Playing); }
                 else setGameState(GameState::Menu);
             }
         }
@@ -224,6 +296,10 @@ void GLView::paintGL() {
         m_journalOverlay.update(dt, Input::instance().isKeyDown(Qt::Key_H));
         if (m_world.endingRequested()) {
             beginEnding();
+            return;
+        }
+        if (int mem = m_world.takeMemory()) {
+            startMemory(mem);
             return;
         }
     }
@@ -250,6 +326,7 @@ void GLView::paintGL() {
             m_dialogue.render(*p, rect(), m_totalTime);
         } else if (m_state == GameState::Paused) {
             m_pauseOverlay.render(*p, rect());
+            drawPauseRecap(*p);
         }
         if (m_settings.subtitles && !m_dialogue.active()) drawSubtitles(*p, rect());
         m_overlay.end();
@@ -268,9 +345,7 @@ void GLView::drawSubtitles(QPainter& p, const QRect& bounds) {
     QString full = speaker.isEmpty() ? subs.currentText() : QString("%1: %2").arg(speaker).arg(subs.currentText());
     int shown = std::min(static_cast<int>(full.size()), static_cast<int>(subs.elapsed() * 55.0f));   // typewriter reveal
     p.save();
-    QFont f("Georgia");
-    f.setPixelSize(20);
-    f.setItalic(true);
+    const QFont& f = cachedFont("Georgia", 20, false, true);
     p.setFont(f);
     QFontMetrics fm(f);
     int w = fm.horizontalAdvance(full) + 36;
@@ -289,7 +364,13 @@ void GLView::keyPressEvent(QKeyEvent* event) {
     const int key = event->key();
     if (event->isAutoRepeat()) { event->accept(); return; }
 
-    if (m_state == GameState::Intro || m_state == GameState::Ending) {
+    if (m_state == GameState::Story) {
+        if (key == Qt::Key_Escape) setGameState(GameState::Menu);
+        event->accept();
+        return;
+    }
+
+    if (inCinematic()) {
         if (m_cinematic) {
             if (key == Qt::Key_Escape) { m_cinematic->skip(); }
             else if (key == Qt::Key_Space || key == Qt::Key_Return || key == Qt::Key_Enter || key == Qt::Key_Right || key == Qt::Key_Down || key == Qt::Key_E) m_cinematic->onAdvanceKey();
@@ -316,6 +397,7 @@ void GLView::keyPressEvent(QKeyEvent* event) {
             event->accept();
             return;
         }
+        if (key == Qt::Key_Space && m_world.mercy().isActive()) { humTap(); event->accept(); return; }
         if (key == Qt::Key_Tab) { m_journalOpen = !m_journalOpen; m_world.audio().playUi(2); return; }
         if (key == Qt::Key_I) { m_inventoryOpen = !m_inventoryOpen; return; }
         if (key == Qt::Key_M) { m_hud.toggleMap(); return; }
@@ -358,7 +440,13 @@ void GLView::mouseMoveEvent(QMouseEvent* event) {
         }
         return;
     }
-    if ((m_state == GameState::Intro || m_state == GameState::Ending) && m_cinematic) {
+    if (m_state == GameState::Story) {
+        int before = m_storyBrowser.hoveredItem();
+        m_storyBrowser.onMouseMove(event->pos());
+        if (m_storyBrowser.hoveredItem() != before && m_storyBrowser.hoveredItem() >= 0) m_world.audio().playUi(0);
+        return;
+    }
+    if (inCinematic() && m_cinematic) {
         m_cinematic->onMouseMove(event->pos(), rect());
         return;
     }
@@ -399,21 +487,25 @@ void GLView::mousePressEvent(QMouseEvent* event) {
         } else if (act == MenuAction::Settings) {
             SettingsDialog dlg(m_settings, this);
             dlg.exec();
-            applySettings();
+            applyQuality();
         } else if (act == MenuAction::Credits) {
-            m_cinematic = makeEndingCinematic(EndingType::E1_Release, &m_world.audio(), true);
-            m_cinematic->start();
-            m_cinematicIsEnding = true;
-            m_world.audio().stopBed(104, 1.0f);
-            m_world.audio().stopBed(105, 1.0f);
-            setGameState(GameState::Ending);
+            openStory();   // the "Credits" slot is now the story & endings overview
         } else if (act == MenuAction::Quit) {
             QApplication::quit();
         }
         return;
     }
 
-    if ((m_state == GameState::Intro || m_state == GameState::Ending) && m_cinematic) {
+    if (m_state == GameState::Story) {
+        StoryAction act = m_storyBrowser.onClick(event->pos());
+        if (act != StoryAction::None) m_world.audio().playUi(1);
+        if (act == StoryAction::Back) setGameState(GameState::Menu);
+        else if (act == StoryAction::WatchIntro) startStoryMovie(true, 0);
+        else if (act == StoryAction::WatchEnding) startStoryMovie(false, m_storyBrowser.endingIndex());
+        return;
+    }
+
+    if (inCinematic() && m_cinematic) {
         m_cinematic->onClick(event->pos(), rect());
         return;
     }
@@ -426,7 +518,7 @@ void GLView::mousePressEvent(QMouseEvent* event) {
         } else if (act == PauseAction::Settings) {
             SettingsDialog dlg(m_settings, this);
             dlg.exec();
-            applySettings();
+            applyQuality();
         } else if (act == PauseAction::Save) {
             SaveGame::saveToFile(savePath().toStdString(), m_world.makeSave());
             SubtitleSystem::instance().show("Hollowmere", "Checkpoint saved.", 2.5f);
@@ -456,6 +548,11 @@ void GLView::mousePressEvent(QMouseEvent* event) {
     }
     if (!m_cursorCaptured) {
         setCursorCaptured(true);
+        return;
+    }
+    if (m_world.mercy().isActive() && event->button() == Qt::LeftButton) {   // hum rhythm: click on the beat
+        humTap();
+        event->accept();
         return;
     }
     Input::instance().onMouseButtonPressed(event->button());

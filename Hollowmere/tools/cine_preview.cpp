@@ -33,7 +33,7 @@ int main(int argc, char** argv) {
         t += dt;
         idle += dt;
         // Pretend to be a reader: tap through each line a moment after it has finished typing.
-        if (idle > 2.4f) { cine->onAdvanceKey(); idle = 1.4f; }
+        if (idle > 9.0f) { cine->onAdvanceKey(); idle = 1.4f; }
         if (t >= nextShot) {
             img.fill(Qt::black);
             QPainter p(&img);

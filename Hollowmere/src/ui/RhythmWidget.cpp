@@ -1,4 +1,5 @@
 #include "RhythmWidget.h"
+#include "FontCache.h"
 #include <QFont>
 #include <cmath>
 
@@ -18,12 +19,11 @@ void RhythmOverlay::render(QPainter& p, const QRect& bounds, const MercySystem& 
     // Background panel
     p.setPen(QPen(QColor(180, 150, 100, 180), 1.0f));
     p.setBrush(QColor(10, 12, 18, 210));
-    p.drawRoundedRect(cx - barW / 2 - 20, cy - 40, barW + 40, 80, 8, 8);
+    p.drawRoundedRect(cx - barW / 2 - 80, cy - 40, barW + 160, 80, 8, 8);
 
-    QFont promptFont("Georgia", 11, QFont::Bold);
-    p.setFont(promptFont);
+    p.setFont(cachedFont("Georgia", 14, true));
     p.setPen(QColor(230, 210, 170));
-    p.drawText(QRect(cx - barW / 2, cy - 32, barW, 25), Qt::AlignCenter, "MERCY HARMONY RHYTHM");
+    p.drawText(QRect(cx - barW / 2 - 80, cy - 32, barW + 160, 25), Qt::AlignCenter, "HUM TO ADA   -   click or SPACE in the green");
 
     // Bar background
     p.setPen(Qt::NoPen);
@@ -42,11 +42,10 @@ void RhythmOverlay::render(QPainter& p, const QRect& bounds, const MercySystem& 
     p.drawRoundedRect(indX - 3, cy - 2, 6, barH + 8, 2, 2);
 
     // Progress counter below
-    QFont cntFont("Courier New", 9, QFont::Normal);
-    p.setFont(cntFont);
+    p.setFont(cachedFont("Courier New", 13));
     p.setPen(QColor(170, 175, 190));
     p.drawText(QRect(cx - barW / 2, cy + 22, barW, 20), Qt::AlignCenter,
-               QString("Successes: %1 / %2").arg(mercy.successCount()).arg(mercy.requiredSuccesses()));
+               QString("Ada is listening: %1 / %2").arg(mercy.successCount()).arg(mercy.requiredSuccesses()));
 }
 
 } // namespace hm

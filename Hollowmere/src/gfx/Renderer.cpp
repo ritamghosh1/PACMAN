@@ -29,13 +29,11 @@ bool Renderer::init(QOpenGLFunctions_3_3_Core* gl, int width, int height) {
     }
 
     // 2. PostFx & ShadowMap
-    if (!m_postFx.init(gl, width, height)) {
+    if (!m_postFx.init(gl, std::max(1, static_cast<int>(width * m_renderScale)), std::max(1, static_cast<int>(height * m_renderScale)))) {
         qCritical("Failed to initialize PostFx!");
         return false;
     }
-    if (!m_shadowMap.init(gl, 1024)) {
-        qWarning("Failed to initialize ShadowMap!");
-    }
+    setQuality(gl, m_quality);
 
     // 3. Generate Procedural Textures & Normal Maps
     qInfo("Generating procedural horror textures...");
@@ -48,11 +46,6 @@ bool Renderer::init(QOpenGLFunctions_3_3_Core* gl, int width, int height) {
     QImage woodNorm = ProcTex::generateNormalMap(woodImg, 2.2f);
     m_texFloor.createFromImage(gl, woodImg);
     m_normFloor.createFromImage(gl, woodNorm);
-
-    QImage plasterImg = ProcTex::generatePeelingPlaster(512, 202);
-    QImage plasterNorm = ProcTex::generateNormalMap(plasterImg, 2.5f);
-    m_texCeil.createFromImage(gl, plasterImg);
-    m_normCeil.createFromImage(gl, plasterNorm);
 
     QImage rustImg = ProcTex::generateRustMetal(512, 303);
     m_texProps.createFromImage(gl, rustImg);
@@ -153,7 +146,23 @@ void Renderer::resize(QOpenGLFunctions_3_3_Core* gl, int width, int height) {
     if (width <= 0 || height <= 0) return;
     m_width = width;
     m_height = height;
-    m_postFx.resize(gl, width, height);
+    m_postFx.resize(gl, std::max(1, static_cast<int>(width * m_renderScale)), std::max(1, static_cast<int>(height * m_renderScale)));
+}
+
+void Renderer::setQuality(QOpenGLFunctions_3_3_Core* gl, int level) {
+    m_quality = std::clamp(level, 0, 2);
+    static const float scale[3] = {0.5f, 0.75f, 1.0f};
+    static const int lights[3] = {4, 8, 12};
+    static const int shadowRes[3] = {0, 512, 1024};
+    m_renderScale = scale[m_quality];
+    m_maxLights = lights[m_quality];
+    m_shadowsOn = m_quality > 0;
+    if (m_postFx.fbo() != 0)
+        m_postFx.resize(gl, std::max(1, static_cast<int>(m_width * m_renderScale)), std::max(1, static_cast<int>(m_height * m_renderScale)));
+    if (shadowRes[m_quality] != m_shadowRes) {
+        m_shadowRes = shadowRes[m_quality];
+        if (m_shadowRes > 0 && !m_shadowMap.init(gl, m_shadowRes)) qWarning("Failed to initialize ShadowMap!");
+    }
 }
 
 void Renderer::render(QOpenGLFunctions_3_3_Core* gl, World& world, float totalTime, GLuint targetFbo) {
@@ -164,7 +173,8 @@ void Renderer::render(QOpenGLFunctions_3_3_Core* gl, World& world, float totalTi
     SpotLight spot = world.player().lantern().spotLight();
 
     // 2. Render Shadow Depth Pass (for lantern spotlight)
-    if (spot.enabled) {
+    const bool useShadows = spot.enabled && m_shadowsOn;
+    if (useShadows) {
         renderShadowPass(gl, world, spot);
     }
 
@@ -187,7 +197,7 @@ void Renderer::render(QOpenGLFunctions_3_3_Core* gl, World& world, float totalTi
     // Shadows
     m_worldShader.setUniformMat4(gl, "uLightSpaceMatrix", m_shadowMap.lightSpaceMatrix());
     m_worldShader.setUniformInt(gl, "uShadowMap", 2);
-    m_worldShader.setUniformInt(gl, "uUseShadows", spot.enabled ? 1 : 0);
+    m_worldShader.setUniformInt(gl, "uUseShadows", useShadows ? 1 : 0);
     m_shadowMap.bindDepthTexture(gl, 2);
 
     // Per-wing atmosphere, eased so crossing a doorway doesn't pop
@@ -241,7 +251,7 @@ void Renderer::render(QOpenGLFunctions_3_3_Core* gl, World& world, float totalTi
             float dx = pl.position.x - pp.x, dz = pl.position.z - pp.z;
             near.push_back({(dx * dx + dz * dz) / (pl.range * pl.range), &pl});   // big lights outrank small candles
         }
-        size_t take = std::min<size_t>(near.size(), 12 - lights.size());
+        size_t take = std::min<size_t>(near.size(), static_cast<size_t>(m_maxLights) - lights.size());
         std::partial_sort(near.begin(), near.begin() + take, near.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
         for (size_t i = 0; i < take; ++i) {
             PointLight pl = *near[i].second;

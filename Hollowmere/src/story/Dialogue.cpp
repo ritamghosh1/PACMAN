@@ -1,5 +1,6 @@
 #include "Dialogue.h"
 #include "audio/AudioEngine.h"
+#include "ui/FontCache.h"
 #include <QFont>
 #include <QFontMetrics>
 #include <QLinearGradient>
@@ -165,10 +166,7 @@ void DialogueBox::render(QPainter& p, const QRect& b, float time) const {
 
     // Name plate with emblem (the visual half of character recognition).
     const QString name = QString::fromUtf8(st.name);
-    QFont nameFont(st.family);
-    nameFont.setPixelSize(static_cast<int>(17 * s));
-    nameFont.setBold(true);
-    nameFont.setLetterSpacing(QFont::AbsoluteSpacing, 3.0 * s);
+    const QFont& nameFont = cachedFont(st.family, static_cast<int>(17 * s), true, false, 3.0 * s);
     QFontMetrics nfm(nameFont);
     if (!name.isEmpty()) {
         int plateW = nfm.horizontalAdvance(name) + static_cast<int>(70 * s);
@@ -224,10 +222,7 @@ void DialogueBox::render(QPainter& p, const QRect& b, float time) const {
     }
 
     // Body text, wrapped for the *full* sentence so words never jump lines while typing.
-    QFont textFont(st.family);
-    textFont.setPixelSize(static_cast<int>(26 * s));
-    textFont.setItalic(st.italic);
-    if (m_current.speaker == Speaker::Crane) textFont.setPixelSize(static_cast<int>(23 * s));
+    const QFont& textFont = cachedFont(st.family, static_cast<int>((m_current.speaker == Speaker::Crane ? 23 : 26) * s), false, st.italic);
     QFontMetrics fm(textFont);
     const int textX = px + static_cast<int>(34 * s);
     const int textW = panelW - static_cast<int>(68 * s);
@@ -271,9 +266,7 @@ void DialogueBox::render(QPainter& p, const QRect& b, float time) const {
         tri.lineTo(c.x(), c.y() + 7 * s);
         tri.closeSubpath();
         p.drawPath(tri);
-        QFont hint(st.family);
-        hint.setPixelSize(static_cast<int>(12 * s));
-        p.setFont(hint);
+        p.setFont(cachedFont(st.family, static_cast<int>(12 * s)));
         p.setPen(QColor(160, 160, 170, static_cast<int>(180 * a)));
         p.drawText(QRectF(panel.right() - 240 * s, panel.bottom() - 28 * s, 170 * s, 20 * s), Qt::AlignRight | Qt::AlignVCenter, "click to continue");
     }

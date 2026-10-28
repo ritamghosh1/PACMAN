@@ -2,6 +2,7 @@
 
 #include <QPainter>
 #include <QRect>
+#include <QImage>
 #include "world/World.h"
 
 namespace hm {
@@ -29,6 +30,9 @@ private:
     void drawBanner(QPainter& p, const QRect& b);
     void drawControls(QPainter& p, int x, int y);
 
+    QImage m_mapImage;
+    int m_mapVersion = -1;
+    int m_mapDoorSig = -1;
     bool m_mapVisible = true;
     float m_sessionTime = 0.0f;
     QString m_bannerText;

@@ -1,5 +1,6 @@
 #include "Cinematic.h"
 #include "audio/AudioEngine.h"
+#include "ui/FontCache.h"
 #include <QFont>
 #include <QLinearGradient>
 #include <QRadialGradient>
@@ -216,10 +217,7 @@ void Cinematic::drawChrome(QPainter& p, const QRect& b, float fade) {
 
     if (m_skippable) {
         QRect sb = skipButton(b);
-        QFont f("Courier New");
-        f.setPixelSize(15);
-        f.setBold(true);
-        p.setFont(f);
+        p.setFont(cachedFont("Courier New", 15, true));
         p.setRenderHint(QPainter::Antialiasing, true);
         p.setPen(QPen(QColor(200, 190, 170, m_hoverSkip ? 230 : 110), 1.2));
         p.setBrush(QColor(0, 0, 0, m_hoverSkip ? 170 : 90));

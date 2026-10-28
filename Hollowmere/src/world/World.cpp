@@ -92,11 +92,13 @@ void World::buildLevel() {
     m_director = Director();
     m_story.clear();
     m_explored.assign(m_mapData.gridW * m_mapData.gridH, false);
+    ++m_exploredVersion;
     m_visitedMask = 1;
     m_activeWing = 0;
     m_pendingWingBanner = 0;
     m_wardenActive = false;
     m_endingRequested = false;
+    m_pendingMemory = 0;
     m_fearLevel = 0.0f;
     m_elapsedTime = 0.0f;
     for (float& t : m_ghostSfxTimer) t = 0.0f;
@@ -107,9 +109,11 @@ void World::newGame() { buildLevel(); queueIntroBriefing(); }
 
 void World::queueIntroBriefing() {
     queueStory(Speaker::Nora, "The gate sealed itself behind me. Mae is somewhere in this house.");
+    queueStory(Speaker::Narrator, "This is St. Aldous Home, burned in 1998. Nora was a patient here as a child. The black-sealed letter says the dead children have taken her daughter.");
+    queueStory(Speaker::Nora, "Each wing keeps one memory sigil: a piece of what happened that night. If I carry all four to the chapel altar, they might give her back.");
     queueStory(Speaker::Manor, "Move with W A S D and look with the mouse. Hold SHIFT to run, C to creep. F switches your lantern on and off.");
     queueStory(Speaker::Manor, "Press E to open doors and pick things up. TAB opens your journal and M toggles the map.");
-    queueStory(Speaker::Nora, "Four memory sigils, four wings, then the chapel. The library is west of the foyer. Start there.");
+    queueStory(Speaker::Nora, "The library is west of the foyer. Start there. Follow the gold arrow.");
     queueStory(Speaker::Manor, "Candle-lit rooms are safe. Whatever walks these halls cannot hurt you inside the light.");
 }
 
@@ -167,10 +171,7 @@ void World::handlePickupEvents() {
         m_audio.playPickupChime();
         switch (ev.type) {
         case PickupType::MemorySigil: {
-            queueStory(Speaker::Narrator, ev.description);
-            static const char* reactions[5] = {"", "Nora: I remember her crying through the vents at night. I told myself it was the wind.", "Nora: The garden. They planted them there.", "Nora: One note, over and over, until it cracked the walls.", "Nora: Eli's. He'd fall asleep holding this. He was five."};
-            int idx = std::clamp(ev.tag, 1, 4);
-            queueStory(Speaker::Nora, QString(reactions[idx]).mid(6));
+            m_pendingMemory = std::clamp(ev.tag, 1, 4);   // GLView plays the animated flashback for this sigil
             if (m_player.sigilCount() >= 3 && !m_wardenActive) {
                 m_wardenActive = true;
                 m_ghosts[4]->resetToHome(m_mapData.wardenSpawn);
@@ -263,7 +264,8 @@ void World::updateObjective() {
             o.hasTarget = true;
             if (next->type() == PickupType::MemorySigil) {
                 o.title = QString("Find %1").arg(next->name());
-                o.detail = QString("Memory sigil %1 of 4, hidden deep in the %2.").arg(next->tag()).arg(kWingShort[std::max(0, wing)]);
+                static const char* why[5] = {"", "Ada's memory: the girl silenced for crying. The Weeper haunts this maze.", "The garden's memory: small graves. Mr. Pell, the Hollow Man, tends them.", "The Chorus Ward's memory. The blind Choir listens for footsteps.", "Eli's memory: your brother and the door you locked. He plays hide-and-seek here."};
+                o.detail = QString::fromUtf8(why[std::clamp(next->tag(), 1, 4)]);
             } else {
                 o.title = QString("Find the %1").arg(next->name());
                 o.detail = QString("It is somewhere in the %1 and opens the next wing.").arg(kWingShort[std::max(0, wing)]);
@@ -388,6 +390,7 @@ void World::update(float dt) {
 
     bool inSafe = m_safeRooms.isInSafeRoom(m_player.position());
     m_inSafe = inSafe;
+    int playerWing = m_mapData.wingAt(m_player.position());
 
     m_player.update(dt, m_mapData.collision, m_mapData.doors, m_mapData.pickups);
     handlePickupEvents();
@@ -404,8 +407,10 @@ void World::update(float dt) {
     m_sanity.update(dt, inDark && !inSafe, m_fearLevel > 0.6f, inSafe, isListening, isHumming);
     m_player.restoreSanity(m_sanity.sanity() - m_player.sanity());
 
-    if (isHumming && !m_mercy.isActive()) m_mercy.startHum();
-    m_mercy.update(dt);
+    // Ada (the Weeper) can be calmed by humming in time with her sobs
+    bool adaNear = playerWing == 1 && !m_mercy.isAdaPacified() && m_ghosts[0]->proximityDistance() < 9.0f;
+    m_mercy.update(dt, isHumming, adaNear);
+    if (adaNear && !isHumming && m_extraPrompt.isEmpty()) m_extraPrompt = "Ada is weeping nearby. Hold H to hum her lullaby";
 
     m_hallucinations.update(dt, m_sanity.sanity(), m_player.position(), m_player.yaw());
     if (m_hallucinations.shouldTriggerPhantomStep()) {
@@ -420,7 +425,7 @@ void World::update(float dt) {
         if (!t.cueText.isEmpty()) SubtitleSystem::instance().show("Manor", t.cueText, 3.5f, QColor(190, 190, 200));
     });
 
-    updateGhosts(dt, eyesClosed, isHoldingBreath, isHumming, inSafe);
+    updateGhosts(dt, eyesClosed, isHoldingBreath, m_mercy.isAdaPacified(), inSafe);
 
     int w = m_mapData.wingAt(m_player.position());
     if (w >= 0 && w != m_activeWing) {
@@ -434,8 +439,10 @@ void World::update(float dt) {
         for (int dr = -3; dr <= 3; ++dr)
             for (int dc = -3; dc <= 3; ++dc) {
                 int c = pc + dc, r = pr + dr;
-                if (c >= 0 && c < m_mapData.gridW && r >= 0 && r < m_mapData.gridH && dc * dc + dr * dr <= 10)
+                if (c >= 0 && c < m_mapData.gridW && r >= 0 && r < m_mapData.gridH && dc * dc + dr * dr <= 10 && !m_explored[r * m_mapData.gridW + c]) {
                     m_explored[r * m_mapData.gridW + c] = true;
+                    ++m_exploredVersion;
+                }
             }
     }
     updateObjective();
@@ -501,7 +508,22 @@ void World::applySave(const SaveData& d) {
     m_activeWing = std::max(0, m_mapData.wingAt(d.playerPos));
     m_pendingWingBanner = m_activeWing;
     for (size_t i = 0; i < d.exploredBits.size() && i < m_explored.size(); ++i) m_explored[i] = d.exploredBits[i] == '1';
+    ++m_exploredVersion;
     updateObjective();
+}
+
+} // namespace hm
+
+namespace hm {
+
+QString World::storyRecap() const {
+    QString s = "You are Nora Hale. Your daughter Mae has vanished, and a black-sealed letter led you to Hollowmere, the orphanage where you were a patient as a child. The dead children keep one memory sigil in each wing. Bring all four to the chapel altar.";
+    int n = m_player.sigilCount();
+    if (n >= 1) s += "\n\nAda, the Weeper, was silenced for crying. Her ribbon is yours now.";
+    if (n >= 2) s += "\n\nMr. Pell \"pruned\" the noisy children in the garden. Their graves are marked with names.";
+    if (n >= 3) s += "\n\nThe Chorus Ward: three children whose throats were joined. Dr. Crane, now the Warden, hunts you for taking what is his.";
+    if (n >= 4) s += "\n\nEli, your little brother, is the Doll. You locked the ward door on him. The chapel is open: face the altar.";
+    return s;
 }
 
 } // namespace hm

@@ -72,9 +72,9 @@ void SettingsDialog::setupUi() {
 
     // Graphics Quality
     m_qualityCombo = new QComboBox(this);
-    m_qualityCombo->addItem("Low (Integrated GPU)", 0);
-    m_qualityCombo->addItem("Medium (Standard 1080p)", 1);
-    m_qualityCombo->addItem("High (Full PCF + HDR + PostFx)", 2);
+    m_qualityCombo->addItem("Low (half resolution, no shadows)", 0);
+    m_qualityCombo->addItem("Medium (3/4 resolution, soft shadows)", 1);
+    m_qualityCombo->addItem("High (native resolution, full lighting)", 2);
     m_qualityCombo->setCurrentIndex(m_settings.qualityLevel);
     form->addRow("Graphics Quality:", m_qualityCombo);
 

@@ -35,7 +35,7 @@ void Weeper::update(float dt,
     }
 
     // 1. Mercy counterplay: Humming lullaby
-    if (playerHumming && m_distToPlayer < 7.0f) {
+    if (playerHumming && m_distToPlayer < 10.0f) {
         pacify();
         m_pacifiedByHum = true;
         m_agitation = 0.0f;

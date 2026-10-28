@@ -502,6 +502,7 @@ void drawTitle(QPainter& p, const ShotContext& c) {
 } // namespace
 
 void scenekit::drawDrive(QPainter& p, const ShotContext& c) { drawDriveScene(p, c); }
+void scenekit::drawDoorScene(QPainter& p, const ShotContext& c) { drawDoor(p, c); }
 
 // ===========================================================================================
 // Intro assembly

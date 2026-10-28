@@ -4,6 +4,7 @@
 #include "audio/AudioEngine.h"
 #include "audio/CineSfx.h"
 #include <QFont>
+#include "ui/FontCache.h"
 #include <QLinearGradient>
 #include <QPainterPath>
 #include <QRadialGradient>
@@ -307,62 +308,55 @@ void drawArchive(QPainter& p, const ShotContext& c) {
     }
 }
 
-// ---- Credits roll ---------------------------------------------------------------------------
-void drawCredits(QPainter& p, const ShotContext& c, const QString& title, const QColor& accent) {
+// ---- Ending summary: which ending you got, and how to reach the others -------------------------
+void drawSummary(QPainter& p, const ShotContext& c, int achieved, const QColor& accent) {
     float t = c.t;
     fillAll(p, QColor(3, 3, 5));
     fog(p, t, mix(accent, QColor(0, 0, 0), 0.7f), 0.30f, 250, 650);
-    embers(p, t, QRectF(0, 0, W, H), 22, 0.08f, mix(accent, QColor(255, 255, 255), 0.3f));
-    // Title card first
-    float card = t < 5.5f ? smooth(t / 1.2f) * (1.0f - smooth((t - 4.2f) / 1.2f)) : 0.0f;
-    if (card > 0.0f) {
-        QFont tf("Georgia");
-        tf.setPixelSize(30);
-        tf.setLetterSpacing(QFont::AbsoluteSpacing, 8.0);
-        p.setFont(tf);
-        p.setPen(QColor(190, 185, 180, static_cast<int>(200 * card)));
-        p.drawText(QRectF(0, 330, W, 50), Qt::AlignHCenter, "THE END");
-        QFont f("Georgia");
-        f.setPixelSize(54);
-        f.setBold(true);
-        f.setLetterSpacing(QFont::AbsoluteSpacing, 4.0);
-        p.setFont(f);
-        int n = std::clamp(static_cast<int>((t - 0.8f) / 0.05f), 0, static_cast<int>(title.size()));
-        p.setPen(QColor(accent.red(), accent.green(), accent.blue(), static_cast<int>(255 * card)));
-        p.drawText(QRectF(0, 400, W, 80), Qt::AlignHCenter, title.left(n));
-    }
-    struct Entry { const char* head; const char* body; };
-    static const Entry credits[] = {
-        {"HOLLOWMERE", "A psychological horror in three dimensions"},
-        {"CONCEPT & DIRECTION", "Computer Graphics Systems Lab"},
-        {"3D ENGINE", "OpenGL 3.3 core profile  -  Qt 5"},
-        {"PROCEDURAL SOUND DESIGN", "Rain, fire, thunder, music box, motifs and typewriter ticks\nall synthesised in code  -  there is no voice acting"},
-        {"GHOST AI", "Sight, sound and noise-bus perception"},
-        {"STORY", "The Quiet Programme at St. Aldous Home"},
-        {"IN MEMORY OF", "Ada  -  Eli  -  and the ten who never walked out"},
-        {"THANK YOU FOR PLAYING", ""},
-    };
-    float scroll = H + 40 - (t - 5.0f) * 56.0f;
-    float y = scroll;
-    for (const auto& e : credits) {
-        QString body = QString::fromUtf8(e.body);
-        int lines = body.isEmpty() ? 0 : body.count('\n') + 1;
-        if (y > -140 && y < H + 60) {
-            QFont hf("Georgia");
-            hf.setPixelSize(32);
-            hf.setBold(true);
-            hf.setLetterSpacing(QFont::AbsoluteSpacing, 3.0);
-            p.setFont(hf);
-            p.setPen(QColor(accent.red(), accent.green(), accent.blue(), 235));
-            p.drawText(QRectF(0, y, W, 44), Qt::AlignHCenter, QString::fromUtf8(e.head));
-            QFont bf("Georgia");
-            bf.setPixelSize(24);
-            bf.setItalic(true);
-            p.setFont(bf);
-            p.setPen(QColor(205, 200, 195, 225));
-            p.drawText(QRectF(0, y + 48, W, 30.0 * std::max(1, lines) + 10), Qt::AlignHCenter | Qt::AlignTop, body);
+    embers(p, t, QRectF(0, 0, W, H), 20, 0.08f, mix(accent, QColor(255, 255, 255), 0.3f));
+
+    static const char* titles[5] = {"ENDING I  -  THE DAWN AT HOLLOWMERE", "ENDING II  -  THE NEW CARETAKER", "ENDING III  -  THE ENDLESS DRIVE", "ENDING IV  -  CHORUS OF THE INNOCENT", "ENDING V  -  THE DOCTOR'S ARCHIVE (SECRET)"};
+    static const char* how[5] = {
+        "Spare all three ghosts (hum to Ada, peek-a-boo with Eli, let the Choir sing) and read 8+ notes.",
+        "Drive off or stun three or more ghosts with the lantern.",
+        "Reach the altar without sparing everyone or banishing three: the default ending.",
+        "Spare all three ghosts but read fewer than 8 notes.",
+        "Read all 16 wing notes and Nora's resignation letter."};
+
+    float head = smooth(t / 1.2f);
+    p.setFont(cachedFont("Georgia", 30, false, false, 8.0));
+    p.setPen(QColor(190, 185, 180, static_cast<int>(210 * head)));
+    p.drawText(QRectF(0, 70, W, 44), Qt::AlignHCenter, "THE END");
+    p.setFont(cachedFont("Georgia", 46, true, false, 3.0));
+    QString title = QString::fromUtf8(titles[achieved]);
+    int n = std::clamp(static_cast<int>((t - 0.8f) / 0.04f), 0, static_cast<int>(title.size()));
+    p.setPen(QColor(accent.red(), accent.green(), accent.blue(), 255));
+    p.drawText(QRectF(0, 120, W, 70), Qt::AlignHCenter, title.left(n));
+
+    float list = smooth((t - 3.0f) / 1.5f);
+    if (list > 0.0f) {
+        p.setFont(cachedFont("Georgia", 22, false, true));
+        p.setPen(QColor(200, 196, 190, static_cast<int>(220 * list)));
+        p.drawText(QRectF(0, 230, W, 34), Qt::AlignHCenter, "Hollowmere has five endings. Your choices with the ghosts decided this one.");
+        for (int i = 0; i < 5; ++i) {
+            float y = 300 + i * 100.0f;
+            bool me = i == achieved;
+            p.setPen(QPen(me ? accent : QColor(80, 76, 84), me ? 2.5 : 1.2));
+            p.setBrush(me ? QColor(accent.red(), accent.green(), accent.blue(), 36) : QColor(14, 14, 18, 210));
+            p.setOpacity(list);
+            p.drawRoundedRect(QRectF(260, y, 1080, 84), 8, 8);
+            p.setFont(cachedFont("Georgia", 24, true, false, 1.5));
+            p.setPen(me ? accent : QColor(215, 210, 205));
+            p.drawText(QRectF(286, y + 6, 1030, 36), Qt::AlignLeft | Qt::AlignVCenter, QString::fromUtf8(titles[i]) + (me ? "   <  YOUR ENDING" : ""));
+            p.setFont(cachedFont("Georgia", 19, false, true));
+            p.setPen(QColor(185, 180, 175));
+            p.drawText(QRectF(286, y + 44, 1030, 32), Qt::AlignLeft | Qt::AlignVCenter, QString::fromUtf8(how[i]));
+            p.setOpacity(1.0);
         }
-        y += 120 + 32 * lines;
+        float blink = 0.5f + 0.5f * std::sin(t * 3.0f);
+        p.setFont(cachedFont("Georgia", 18, false, true));
+        p.setPen(QColor(210, 200, 185, static_cast<int>(200 * blink * list)));
+        p.drawText(QRectF(0, 830, W, 30), Qt::AlignHCenter, "click anywhere to return to the menu");
     }
 }
 
@@ -377,7 +371,6 @@ std::unique_ptr<Cinematic> makeEndingCinematic(EndingType ending, AudioEngine* a
     auto cine = std::make_unique<Cinematic>(audio);
     const int idx = static_cast<int>(ending);
     const QString epilogue = QString::fromStdString(EndingResolver::getEndingEpilogue(ending));
-    const QString title = QString::fromStdString(EndingResolver::getEndingTitle(ending));
 
     Shot s;
     s.lead = 3.0f;
@@ -450,8 +443,8 @@ std::unique_ptr<Cinematic> makeEndingCinematic(EndingType ending, AudioEngine* a
 
     Shot credits;
     credits.id = "credits";
-    credits.draw = [title, accent](QPainter& p, const ShotContext& c) { drawCredits(p, c, title, accent); };
-    credits.autoDuration = 5.0f + 8 * 5.0f + 6.0f;
+    credits.draw = [idx, accent](QPainter& p, const ShotContext& c) { drawSummary(p, c, idx, accent); };
+    credits.autoDuration = 180.0f;   // stays up until the viewer clicks
     credits.fadeIn = 2.0f;
     credits.fadeOut = 2.5f;
     credits.zoom0 = credits.zoom1 = 1.0f;

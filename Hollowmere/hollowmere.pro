@@ -1,6 +1,13 @@
 QT += core gui widgets multimedia opengl
 
 CONFIG += c++17 console sdk_no_version_check
+
+# Always build an optimised binary. With Qt's default debug_and_release on macOS a plain
+# `make` produced an unoptimised (-O0) debug build, which is far too slow for this renderer.
+CONFIG -= debug_and_release debug
+CONFIG += release
+QMAKE_CXXFLAGS_RELEASE -= -O1 -O2 -O3
+QMAKE_CXXFLAGS_RELEASE += -O2
 CONFIG -= app_bundle
 
 TEMPLATE = app
@@ -103,6 +110,8 @@ HEADERS += \
     src/ui/JournalWidget.h \
     src/ui/InventoryWidget.h \
     src/ui/RhythmWidget.h \
+    src/ui/StoryBrowser.h \
+    src/ui/FontCache.h \
     src/app/GameState.h \
     src/app/MainWindow.h
 
@@ -171,6 +180,7 @@ SOURCES += \
     src/story/CineArt.cpp \
     src/story/Cutscenes.cpp \
     src/story/CutscenesEnding.cpp \
+    src/story/CutscenesMemory.cpp \
     src/audio/Synth.cpp \
     src/audio/Synth2.cpp \
     src/audio/Spatial.cpp \
@@ -193,6 +203,7 @@ SOURCES += \
     src/ui/JournalWidget.cpp \
     src/ui/InventoryWidget.cpp \
     src/ui/RhythmWidget.cpp \
+    src/ui/StoryBrowser.cpp \
     src/app/MainWindow.cpp
 
 RESOURCES += \

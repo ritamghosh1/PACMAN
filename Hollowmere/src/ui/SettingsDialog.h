@@ -10,7 +10,7 @@
 namespace hm {
 
 struct GameSettings {
-    int qualityLevel = 2; // 0=Low, 1=Med, 2=High
+    int qualityLevel = 1; // 0=Low, 1=Med, 2=High
     float resolutionScale = 1.0f;
     bool vsync = true;
     float masterVolume = 0.85f;

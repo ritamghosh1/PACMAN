@@ -13,6 +13,7 @@
 #include "ui/JournalWidget.h"
 #include "ui/InventoryWidget.h"
 #include "ui/RhythmWidget.h"
+#include "ui/StoryBrowser.h"
 #include "ui/SettingsDialog.h"
 #include "app/GameState.h"
 #include "app/DebugConsole.h"
@@ -52,6 +53,13 @@ private:
     void finishIntro();
     void beginEnding();
     void applySettings();
+    void applyQuality();
+    void humTap();
+    void startMemory(int sigil);
+    void openStory();
+    void startStoryMovie(bool intro, int ending);
+    bool inCinematic() const { return m_state == GameState::Intro || m_state == GameState::Ending || m_state == GameState::Memory; }
+    void drawPauseRecap(QPainter& p);
     void startMenuAmbience();
     void stepWorld(float dt);
     void paintCinematic(float dt, Cinematic* cine);
@@ -73,6 +81,8 @@ private:
     DebugConsole m_debugConsole;
     Overlay2D m_overlay;
     DialogueBox m_dialogue;
+    StoryBrowser m_storyBrowser;
+    bool m_returnToStory = false;
 
     std::unique_ptr<Cinematic> m_cinematic;
     bool m_cinematicIsEnding = false;
