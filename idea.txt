@@ -1,0 +1,13 @@
+well we need to upgrade our existing pacman project as our prof was very happy with our pacman game, now he wanted us to upgrade our game , the basic idea is a 3d maze ( not literally but something like a maze or like granny where the whole house is kinda a maze and we need artifacts to unlocj the next part of the maze , there will be some ghosts around ( not the ) and we need to avoid them )
+now we may use two modes where the whole maze will be visible like complete light , or only the local will be visible like the user has torch with him , we might use first person or second parson view and dont need to use 5px grid size , we can smoothen our game and system 
+I have two ideas in mind 
+1. Horror theme like the fear game , maybe something like resident evil but with twists , like the whole house is a maze and we need to find some artifacts to unlock the next part of the maze , there will be some ghosts around ( not the pacman ghosts ) and we need to avoid them , there will be some puzzles to solve in order to unlock the next part of the maze , 
+2. Fantasy theme like the harry potter , where we need to find some artifacts to unlock the next part of the maze , there will be some ghosts around ( not the pacman ghosts ) and we need to avoid them , there will be some puzzles to solve in order to unlock the next part of the maze , 
+3. The mentalist theme , where the user will be patrick jane and he have to find red john , with other characters there ( like lisbon, van pelt etc) to help him , maybe there will be some red herrings and clues to find , there will be some puzzles to solve in order to unlock the next part of the maze , 
+but the basic idea is suspense so we need some suspenseful music ( or horror if we go with the horror theme), there will be jumpscares , and we dont need multiple levels , one single story mode , but sufficiently long story and engaging so the usr keeps playing it,
+now in the beginning we need to hook up the user with the story , I have three ideas for that
+1. Comic like 
+2. Animated movie ( like the shadow fight )
+3. In game animated scne , like the fear or any other game, we might chose any of that based on feasability , my personal fav is animated movie, 
+** we need to use qt for that and openGL for 3d modeling ( or any other ) for the project,
+ remember the sound and graphics play a huge role in the usr experience
