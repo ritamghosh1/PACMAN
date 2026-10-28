@@ -13,12 +13,15 @@
 #include "MusicDirector.h"
 #include "BodyAudio.h"
 #include "CineSfx.h"
+#include "AssetAudio.h"
 #include "core/mathx.h"
 
 namespace hm {
 
 struct AudioVoice {
     std::vector<int16_t> samples;
+    const std::vector<int16_t>* ref = nullptr;   // points at a long-lived AudioClip instead of copying it
+    bool stereo = false;                          // interleaved L/R (music)
     size_t cursor = 0;
     float volumeLeft = 1.0f;
     float volumeRight = 1.0f;
@@ -96,6 +99,15 @@ public:
     void stopBed(int tag, float fadeOutSec = 1.5f);
     void setBedVolume(int tag, float volume, float rampSec = 0.5f);
     void stopAllBeds(float fadeOutSec = 1.0f);
+    // Recordings (assets/audio). All of these fall back silently if the files are not present.
+    bool haveAssets() const { return AssetAudio::instance().ready(); }
+    void playClip(const AudioClip* clip, float volume = 1.0f, float pan = 0.0f);
+    void playClipSpatial(const AudioClip* clip, const Vec3& pos, float volume = 1.0f, float maxDist = 25.0f);
+    void startClipBed(int tag, const AudioClip* clip, float volume, float fadeInSec = 2.0f);   // looping, any tag
+    // Gameplay music director: chooses the track from where the player is and what is hunting them.
+    // chaseGhost: -1 none, otherwise the GhostType index (Weeper 0 .. Warden 4)
+    void stopGameplayMusic() { stopBed(200, 1.5f); stopBed(201, 1.5f); m_musicName.clear(); }
+    void setExplorationContext(int wing, bool inSafeRoom, int chaseGhost);
     void playTypeTick(Speaker who);
     void playSpeakerMotif(Speaker who);
     void playUi(int kind); // 0 hover, 1 click, 2 advance
@@ -135,6 +147,20 @@ private:
     MusicDirector m_musicDirector;
     BodyAudio m_bodyAudio;
 
+    int m_ghostCue = 0;
+    bool m_nextDoorOpens = true;
+    float m_fearNow = 0.0f;
+    float m_staminaNow = 1.0f;
+    // music director state
+    std::string m_musicName;
+    int m_musicTag = 200;
+    float m_musicClock = 0.0f;
+    float m_musicSwitchedAt = -100.0f;
+    float m_musicVolume = 0.0f;
+    bool m_assetsAdopted = false;
+    float m_ambientCueTimer = 12.0f;
+    Vec3 m_listenerPos;
+    int m_ctxWing = 0;
     std::vector<std::vector<int16_t>> m_tickCache;   // [speaker*4 + variant]
     int m_tickCounter = 0;
     bool m_gameplayMuted = false;

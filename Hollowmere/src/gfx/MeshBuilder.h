@@ -24,6 +24,12 @@ public:
     void addSphere(const Vec3& center, float radius, int rings = 10, int sectors = 12,
                    const Vec4& color = Vec4(1, 1, 1, 1));
 
+    // Surface of revolution around the Y axis through `base`. profile points are (radius, height), bottom to top.
+    void addLathe(const Vec3& base, const std::vector<Vec2>& profile, int segments, const Vec4& color, float zScale = 1.0f);
+    // Tapered tube between two points (limbs, hair strands, chains).
+    void addTube(const Vec3& a, const Vec3& b, float radiusA, float radiusB, int segments, const Vec4& color);
+    void addEllipsoid(const Vec3& center, float rx, float ry, float rz, int rings, int sectors, const Vec4& color);
+
     void build(QOpenGLFunctions_3_3_Core* gl, Mesh& outMesh) const;
 
     const std::vector<Vertex>& vertices() const { return m_vertices; }

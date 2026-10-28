@@ -520,11 +520,12 @@ std::unique_ptr<Cinematic> makeIntroCinematic(AudioEngine* audio) {
         s.zoom0 = 1.0f; s.zoom1 = 1.42f; s.camTime = 30.0f;
         s.fadeIn = 2.2f;
         s.onEnter = [&B](Cinematic& c) {
-            bed(c, BedPad, B.padTense, 0.55f, 3.0f);
-            sfx(c, B.clock, 0.7f);
+            music(c, "music_intro", 0.62f, 4.0f);
+            bed(c, BedPad, B.padTense, 0.20f, 3.0f);
+            sfx(c, B.clock, 0.6f);
         };
         s.cues = {
-            {5.0f, [&B](Cinematic& c) { bed(c, BedFire, B.fire, 0.05f, 6.0f); }},
+            {5.0f, [&B](Cinematic& c) { bed(c, BedFire, B.fire, 0.04f, 6.0f); }},
             {9.0f, [&B](Cinematic& c) { sfx(c, B.clock, 0.5f); }},
         };
         s.lines = {
@@ -555,9 +556,8 @@ std::unique_ptr<Cinematic> makeIntroCinematic(AudioEngine* audio) {
         s.pan0 = QPointF(0, 0); s.pan1 = QPointF(-40, -10);
         s.onEnter = [&B](Cinematic& c) {
             bedStop(c, BedFire, 2.5f);
-            bed(c, BedRain, B.rain, 0.55f, 2.5f);
-            bed(c, BedPad, B.padLow, 0.35f, 3.0f);
-            sfx(c, B.thunderB, 0.55f);
+            bed(c, BedRain, B.rain, 0.10f, 3.5f);          // a distant hush of rain, not a hiss
+            bed(c, BedPad, B.padLow, 0.18f, 3.0f);
         };
         s.lines = {
             {Speaker::Narrator, U("Twenty-five years later.")},
@@ -581,12 +581,12 @@ std::unique_ptr<Cinematic> makeIntroCinematic(AudioEngine* audio) {
         s.zoom0 = 1.0f; s.zoom1 = 1.22f; s.camTime = 26.0f;
         s.pan0 = QPointF(0, 10); s.pan1 = QPointF(-30, -30);
         s.onEnter = [&B](Cinematic& c) {
-            bedVol(c, BedRain, 0.22f, 2.0f);
-            bed(c, BedPad, B.padLow, 0.32f, 3.0f);
+            bedVol(c, BedRain, 0.05f, 2.0f);
+            bed(c, BedPad, B.padLow, 0.16f, 3.0f);
         };
         s.cues = {
             {2.3f, [&B](Cinematic& c) { sfx(c, B.lock, 0.8f); }},
-            {3.0f, [&B](Cinematic& c) { bed(c, BedBox, B.boxClean, 0.62f, 0.4f); }},
+            {3.0f, [&B](Cinematic& c) { bed(c, BedBox, B.boxClean, 0.50f, 0.4f); }},
         };
         s.lines = {
             {Speaker::Narrator, U("It arrived this morning. No stamp. No return address.")},
@@ -596,7 +596,7 @@ std::unique_ptr<Cinematic> makeIntroCinematic(AudioEngine* audio) {
             {Speaker::Narrator, U("The envelope was sealed in black wax, with an address she had spent twenty-five years forgetting.")},
         };
         s.onLine = [&B](Cinematic& c, int i) {
-            if (i == 2) bed(c, BedBox, B.boxWarped, 0.62f, 0.2f);
+            if (i == 2) bed(c, BedBox, B.boxWarped, 0.50f, 0.2f);
             if (i == 3) { bedStop(c, BedBox, 0.12f); sfx(c, B.thud, 0.7f); c.shake(0.4f); }
             if (i == 4) sfx(c, B.rustle, 0.9f);
         };
@@ -614,23 +614,23 @@ std::unique_ptr<Cinematic> makeIntroCinematic(AudioEngine* audio) {
         s.onEnter = [&B](Cinematic& c) {
             sfx(c, B.carDoor, 0.9f);
             bedStop(c, BedPad, 2.0f);
-            bedVol(c, BedRain, 0.38f, 2.0f);
-            bed(c, BedCar, B.car, 0.6f, 2.5f);
-            bed(c, BedPad, B.padTense, 0.3f, 6.0f);
+            bedVol(c, BedRain, 0.08f, 2.0f);
+            bed(c, BedCar, B.car, 0.30f, 2.5f);
+            bed(c, BedPad, B.padTense, 0.16f, 6.0f);
         };
         s.cues = {
-            {1.4f, [&B](Cinematic& c) { sfx(c, B.wiper, 0.5f); }},
-            {3.4f, [&B](Cinematic& c) { sfx(c, B.wiper, 0.5f); }},
-            {5.0f, [&B](Cinematic& c) { sfx(c, B.thunderA, 0.7f); }},
+            {1.4f, [&B](Cinematic& c) { sfx(c, B.wiper, 0.3f); }},
+            {3.4f, [&B](Cinematic& c) { sfx(c, B.wiper, 0.28f); }},
+            {5.0f, [&B](Cinematic& c) { sfx(c, B.thunderA, 0.30f); }},
             {5.2f, [](Cinematic& c) { c.shake(0.25f); }},
-            {5.3f, [&B](Cinematic& c) { sfx(c, B.wiper, 0.5f); }},
-            {7.2f, [&B](Cinematic& c) { sfx(c, B.wiper, 0.5f); }},
-            {9.1f, [&B](Cinematic& c) { sfx(c, B.wiper, 0.5f); }},
-            {11.0f, [&B](Cinematic& c) { sfx(c, B.wiper, 0.5f); }},
-            {13.5f, [&B](Cinematic& c) { sfx(c, B.thunderB, 0.8f); c.shake(0.25f); }},
-            {13.0f, [&B](Cinematic& c) { sfx(c, B.wiper, 0.5f); }},
-            {15.0f, [&B](Cinematic& c) { sfx(c, B.wiper, 0.5f); }},
-            {22.0f, [&B](Cinematic& c) { sfx(c, B.thunderA, 0.9f); c.shake(0.3f); }},
+            {5.3f, [&B](Cinematic& c) { sfx(c, B.wiper, 0.28f); }},
+            {7.2f, [&B](Cinematic& c) { sfx(c, B.wiper, 0.28f); }},
+            {9.1f, [&B](Cinematic& c) { sfx(c, B.wiper, 0.28f); }},
+            {11.0f, [&B](Cinematic& c) { sfx(c, B.wiper, 0.28f); }},
+            {13.5f, [&B](Cinematic& c) { sfx(c, B.thunderB, 0.22f); c.shake(0.2f); }},
+            {13.0f, [&B](Cinematic& c) { sfx(c, B.wiper, 0.28f); }},
+            {15.0f, [&B](Cinematic& c) { sfx(c, B.wiper, 0.28f); }},
+            {22.0f, [&B](Cinematic& c) { sfx(c, B.thunderA, 0.30f); c.shake(0.25f); }},
         };
         s.lines = {
             {Speaker::Nora,   U("St. Aldous Home for Children. Closed since the fire.")},
@@ -656,20 +656,19 @@ std::unique_ptr<Cinematic> makeIntroCinematic(AudioEngine* audio) {
             sfx(c, B.carDoor, 0.8f);
             bedStop(c, BedCar, 1.0f);
             bedStop(c, BedPad, 2.0f);
-            bed(c, BedWind, B.wind, 0.55f, 3.0f);
-            bedVol(c, BedRain, 0.45f, 1.0f);
+            bed(c, BedWind, B.wind, 0.22f, 3.0f);
+            bedVol(c, BedRain, 0.08f, 1.0f);
             sfx(c, B.gravel, 0.55f);
         };
         s.cues = {
-            {3.0f, [&B](Cinematic& c) { sfx(c, B.thunderA, 0.9f); c.shake(0.3f); }},
-            {11.0f, [&B](Cinematic& c) { sfx(c, B.thunderB, 0.9f); c.shake(0.3f); }},
-            {19.5f, [&B](Cinematic& c) { sfx(c, B.thunderA, 1.0f); c.shake(0.35f); }},
-            {6.0f, [&B](Cinematic& c) { sfx(c, B.windowOn, 0.5f, -0.4f); }},
-            {9.0f, [&B](Cinematic& c) { sfx(c, B.windowOn, 0.5f, 0.3f); }},
-            {13.0f, [&B](Cinematic& c) { sfx(c, B.windowOn, 0.55f, -0.1f); }},
-            {16.0f, [&B](Cinematic& c) { sfx(c, B.windowOn, 0.55f, 0.5f); }},
-            {19.0f, [&B](Cinematic& c) { sfx(c, B.windowOn, 0.6f, 0.0f); }},
-            {2.0f, [&B](Cinematic& c) { sfx(c, B.creak, 0.55f); }},
+            {3.0f, [&B](Cinematic& c) { sfx(c, B.thunderA, 0.32f); c.shake(0.25f); }},
+            {19.5f, [&B](Cinematic& c) { sfx(c, B.thunderA, 0.34f); c.shake(0.3f); }},
+            {6.0f, [&B](Cinematic& c) { sfx(c, B.windowOn, 0.225f, -0.4f); }},
+            {9.0f, [&B](Cinematic& c) { sfx(c, B.windowOn, 0.225f, 0.3f); }},
+            {13.0f, [&B](Cinematic& c) { sfx(c, B.windowOn, 0.24750000000000003f, -0.1f); }},
+            {16.0f, [&B](Cinematic& c) { sfx(c, B.windowOn, 0.24750000000000003f, 0.5f); }},
+            {19.0f, [&B](Cinematic& c) { sfx(c, B.windowOn, 0.27f, 0.0f); }},
+            {2.0f, [&B](Cinematic& c) { sfx(c, B.creak, 0.40f); }},
         };
         s.lines = {
             {Speaker::Crane,   U("YOU ARE LATE, MISS HALE. THE CHILDREN HAVE BEEN WAITING.")},
@@ -702,8 +701,8 @@ std::unique_ptr<Cinematic> makeIntroCinematic(AudioEngine* audio) {
         s.onEnter = [&B](Cinematic& c) {
             bedStop(c, BedRain, 2.0f);
             bedStop(c, BedWind, 2.0f);
-            bed(c, BedPad, B.padTense, 0.5f, 1.0f);
-            sfx(c, B.riser, 0.6f);
+            bed(c, BedPad, B.padTense, 0.22f, 1.0f);
+            sfx(c, B.riser, 0.40f);
         };
         s.cues = {{3.2f, [&B](Cinematic& c) { sfx(c, B.impact, 1.0f); c.shake(0.8f); c.flash(0.25f); }}};
         cine->addShot(std::move(s));

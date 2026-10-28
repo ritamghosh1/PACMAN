@@ -17,6 +17,10 @@ macx: QMAKE_LIBS_OPENGL = -framework OpenGL
 macx: QMAKE_MACOSX_DEPLOYMENT_TARGET = 11.0
 
 INCLUDEPATH += src
+
+# Where the downloaded recordings live (assets/audio). The game also looks next to the executable.
+DEFINES += HM_ASSET_DIR=\\\"$$PWD/assets\\\"
+QMAKE_CFLAGS += -w
 DEPENDPATH += src
 
 HEADERS += \
@@ -66,6 +70,7 @@ HEADERS += \
     src/audio/BodyAudio.h \
     src/audio/scores/motifs.h \
     src/audio/CineSfx.h \
+    src/audio/AssetAudio.h \
     src/audio/AudioEngine.h \
     src/entities/Ghost.h \
     src/gameplay/Item.h \
@@ -193,6 +198,8 @@ SOURCES += \
     src/audio/scores/intro.cpp \
     src/audio/scores/endings.cpp \
     src/audio/CineSfx.cpp \
+    src/audio/AssetAudio.cpp \
+    src/third_party/stb_vorbis.c \
     src/audio/AudioEngine.cpp \
     src/app/Difficulty.cpp \
     src/app/DebugConsole.cpp \

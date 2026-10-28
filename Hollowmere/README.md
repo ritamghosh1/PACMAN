@@ -198,3 +198,8 @@ Hollowmere/
 - **Humming to Ada** is a real mini-game: stand within earshot, hold H, then click or press Space when the marker is in the green. The panel only shows while it can work.
 - **Story clarity:** animated memory flashbacks after each sigil explain who the ghost was; the objective panel says why each item matters; the pause screen shows "The story so far".
 - **Demo mode:** the old Credits slot is now **STORY & ENDINGS**: a readable summary of the story and how it plays, all five endings with how to reach each, and buttons to watch the intro and any ending. Endings finish on a summary of all five instead of credits.
+
+### v2.2 changes
+- **Real recordings for sound and music.** `assets/audio/` holds 104 clips from the open-source game *SCP: Containment Breach* (CC BY-SA 3.0, credited in `assets/audio/ATTRIBUTION.md`): a title theme, a music track per wing that crossfades with where you are, chase themes when a ghost hunts you, jump-scare stingers, creature sounds for each ghost, unsettling ambient cues, wood doors and pickups. They are decoded at start-up by `src/third_party/stb_vorbis.c` (public domain). If the folder is missing the game falls back to its procedural sound. The pure-sine drone, the constant breathing loop and the hissy storm were removed or toned down.
+- **Complete backstory** in *Story & Endings*: the Quiet Programme, Nora as Subject 9, the night of the fire, why Mae is involved, the four sigils, every ending explained, and a **Ghosts** gallery with a clickable portrait and history for each ghost.
+- **New ghost models and shader**: lathe/tube-built figures (gown, hair, blank face, joined throats, porcelain mask, burnt door with chains) with per-ghost tint, vapour edges and glowing details.

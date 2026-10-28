@@ -166,16 +166,16 @@ std::vector<int16_t> rainBed(float sec) {
     Buf b = mk(sec + 0.6f);
     Rnd r(11);
     Pink pk;
-    Bq hp(Bq::HP, 380.0f), lp(Bq::LP, 7500.0f), roof(Bq::BP, 2600.0f, 0.8f);
+    Bq hp(Bq::HP, 140.0f), lp(Bq::LP, 2600.0f), roof(Bq::BP, 1500.0f, 0.8f);   // soft low patter: no harsh hiss above 3 kHz
     for (size_t i = 0; i < b.size(); ++i) {
         float w = r.bi();
-        float x = lp.p(hp.p(pk.p(w))) * 1.6f + roof.p(w) * 0.25f;
+        float x = lp.p(hp.p(pk.p(w))) * 1.6f + roof.p(w) * 0.08f;
         b[i] = x;
     }
     // Individual drops: tiny pitched ticks sprinkled irregularly.
-    for (int d = 0; d < static_cast<int>(sec * 55); ++d) {
+    for (int d = 0; d < static_cast<int>(sec * 14); ++d) {
         float t0 = r.next() * sec;
-        partial(b, t0, 1800.0f + r.next() * 3500.0f, 0.04f + r.next() * 0.05f, 0.006f + r.next() * 0.01f);
+        partial(b, t0, 900.0f + r.next() * 1200.0f, 0.03f + r.next() * 0.03f, 0.008f + r.next() * 0.01f);
     }
     return pcm(loopify(b, 0.6f), 0.5f, false);
 }

@@ -385,11 +385,10 @@ std::unique_ptr<Cinematic> makeEndingCinematic(EndingType ending, AudioEngine* a
         s.id = "dawn";
         s.draw = drawDawn;
         accent = QColor(240, 205, 140);
-        s.onEnter = [&B, audio, idx](Cinematic& c) {
-            bed(c, BedWind, B.wind, 0.30f, 3.0f);
-            bed(c, BedPad, B.padLow, 0.30f, 4.0f);
-            if (audio) audio->playEndingScore(idx);
-            sfx(c, B.creak, 0.5f);
+        s.onEnter = [&B](Cinematic& c) {
+            music(c, "music_credits", 0.55f, 3.0f);
+            bed(c, BedWind, B.wind, 0.12f, 3.0f);
+            sfx(c, B.creak, 0.35f);
         };
         s.onLine = [&B](Cinematic& c, int i) { if (i == 1) sfx(c, B.windowOn, 0.5f); if (i == 2) bed(c, BedBox, B.boxClean, 0.4f, 1.5f); };
         break;
@@ -397,10 +396,9 @@ std::unique_ptr<Cinematic> makeEndingCinematic(EndingType ending, AudioEngine* a
         s.id = "ash";
         s.draw = drawAshHall;
         accent = QColor(205, 100, 90);
-        s.onEnter = [&B, audio, idx](Cinematic& c) {
-            bed(c, BedFire, B.fire, 0.22f, 3.0f);
-            bed(c, BedPad, B.padTense, 0.45f, 3.0f);
-            if (audio) audio->playEndingScore(idx);
+        s.onEnter = [&B](Cinematic& c) {
+            music(c, "music_chase_pell", 0.55f, 3.0f);
+            bed(c, BedFire, B.fire, 0.16f, 3.0f);
         };
         s.onLine = [&B](Cinematic& c, int i) { if (i == 2) { sfx(c, B.lock, 1.0f); sfx(c, B.impact, 0.5f); c.shake(0.4f); } };
         break;
@@ -408,22 +406,21 @@ std::unique_ptr<Cinematic> makeEndingCinematic(EndingType ending, AudioEngine* a
         s.id = "loop";
         s.draw = drawLoopDrive;
         accent = QColor(150, 165, 205);
-        s.onEnter = [&B, audio, idx](Cinematic& c) {
-            bed(c, BedRain, B.rain, 0.35f, 2.0f);
-            bed(c, BedCar, B.car, 0.5f, 2.0f);
-            bed(c, BedBox, B.boxWarped, 0.35f, 3.0f);
-            if (audio) audio->playEndingScore(idx);
+        s.onEnter = [&B](Cinematic& c) {
+            music(c, "music_8601", 0.5f, 3.0f);
+            bed(c, BedRain, B.rain, 0.06f, 2.0f);
+            bed(c, BedCar, B.car, 0.25f, 2.0f);
+            bed(c, BedBox, B.boxWarped, 0.22f, 3.0f);
         };
-        s.onLine = [&B](Cinematic& c, int i) { if (i == 1) sfx(c, B.thunderB, 0.6f); if (i >= 2) sfx(c, B.knock, 0.4f); };
+        s.onLine = [&B](Cinematic& c, int i) { if (i == 1) sfx(c, B.thunderB, 0.25f); if (i >= 2) sfx(c, B.knock, 0.4f); };
         break;
     case EndingType::E4_Martyr:
         s.id = "chapel";
         s.draw = drawChapel;
         accent = QColor(236, 178, 96);
-        s.onEnter = [&B, audio, idx](Cinematic& c) {
-            bed(c, BedExtra, B.graveyard, 0.30f, 3.0f);
-            bed(c, BedBox, B.boxClean, 0.40f, 2.0f);
-            if (audio) audio->playEndingScore(idx);
+        s.onEnter = [&B](Cinematic& c) {
+            music(c, "music_cellar", 0.6f, 3.0f);
+            bed(c, BedBox, B.boxClean, 0.30f, 2.0f);
         };
         s.onLine = [&B](Cinematic& c, int i) { if (i == 1) { sfx(c, B.windowOn, 0.7f); bedStop(c, BedBox, 4.0f); } if (i == 2) sfx(c, B.lock, 0.6f); };
         break;
@@ -431,10 +428,9 @@ std::unique_ptr<Cinematic> makeEndingCinematic(EndingType ending, AudioEngine* a
         s.id = "archive";
         s.draw = drawArchive;
         accent = QColor(240, 220, 130);
-        s.onEnter = [&B, audio, idx](Cinematic& c) {
-            bed(c, BedPad, B.padTense, 0.35f, 3.0f);
-            sfx(c, B.clock, 0.5f);
-            if (audio) audio->playEndingScore(idx);
+        s.onEnter = [&B](Cinematic& c) {
+            music(c, "music_205", 0.55f, 3.0f);
+            sfx(c, B.clock, 0.4f);
         };
         s.onLine = [&B](Cinematic& c, int i) { if (i == 1) { sfx(c, B.rustle, 0.8f); sfx(c, B.thud, 0.9f); c.shake(0.6f); } };
         break;
@@ -448,7 +444,7 @@ std::unique_ptr<Cinematic> makeEndingCinematic(EndingType ending, AudioEngine* a
     credits.fadeIn = 2.0f;
     credits.fadeOut = 2.5f;
     credits.zoom0 = credits.zoom1 = 1.0f;
-    credits.onEnter = [&B](Cinematic& c) { bedStop(c, BedFire, 3.0f); bedStop(c, BedCar, 3.0f); bed(c, BedPad, B.padLow, 0.3f, 3.0f); };
+    credits.onEnter = [&B](Cinematic& c) { bedStop(c, BedFire, 3.0f); bedStop(c, BedCar, 3.0f); bedStop(c, BedRain, 3.0f); music(c, "music_ending", 0.55f, 2.5f); };
     cine->addShot(std::move(credits));
     return cine;
 }

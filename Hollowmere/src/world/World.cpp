@@ -291,6 +291,8 @@ void World::updateObjective() {
 void World::updateGhosts(float dt, bool eyesClosed, bool holdingBreath, bool humming, bool inSafe) {
     const Vec3 pFwd = m_player.forward();
     float minGhostDist = 999.0f;
+    float chaseDist = 999.0f;
+    int chaseGhost = -1;
     int playerWing = m_mapData.wingAt(m_player.position());
     m_mapData.collision.setIgnoreTag(1);   // doors do not stop the dead
     // The Warden always knows roughly where you are, unless you are in a candle-lit refuge
@@ -315,6 +317,7 @@ void World::updateGhosts(float dt, bool eyesClosed, bool holdingBreath, bool hum
 
         float d = ghost->proximityDistance();
         if (!inSafe) minGhostDist = std::min(minGhostDist, d);
+        if (!inSafe && ghost->state() == GhostState::Hunting && d < 14.0f && d < chaseDist) { chaseDist = d; chaseGhost = static_cast<int>(ghost->type()); }
 
         if (ghost->hasAttacked()) {
             ghost->resetAttackFlag();
@@ -322,6 +325,8 @@ void World::updateGhosts(float dt, bool eyesClosed, bool holdingBreath, bool hum
                 m_player.takeDamage();
                 m_health.takeDamage();
                 m_audio.playJumpscareStinger();
+                if (ghost->type() == GhostType::Weeper) m_audio.playClip(AssetAudio::instance().find("weeper_scream"), 0.9f);
+                else if (ghost->type() == GhostType::Doll) m_audio.playClip(AssetAudio::instance().find("lure_idle6"), 0.9f);
                 m_director.registerPlayerDeath();
                 m_fearLevel = 1.0f;
                 if (m_player.healthState() == HealthState::Critical || m_health.state() == PlayerHealthState::Dead)
@@ -348,6 +353,7 @@ void World::updateGhosts(float dt, bool eyesClosed, bool holdingBreath, bool hum
         else if (ghost->type() == GhostType::Warden && d < 24.0f && tmr > 2.6f) { tmr = 0; m_audio.playWardenKeys(ghost->position()); }
     }
     m_mapData.collision.setIgnoreTag(-1);
+    m_audio.setExplorationContext(m_activeWing, inSafe, chaseGhost);
     m_director.update(dt, m_player.sanity(), minGhostDist, inSafe);
     m_fearLevel = inSafe ? 0.0f : std::max(m_director.intensity(), minGhostDist < 12.0f ? (1.0f - minGhostDist / 12.0f) * 0.9f : 0.0f);
 }

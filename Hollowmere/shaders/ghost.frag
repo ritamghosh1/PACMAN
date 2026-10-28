@@ -4,6 +4,8 @@ in vec3 vWorldPos;
 in vec3 vNormal;
 in vec2 vUV;
 in vec3 vViewDir;
+in vec4 vColor;
+in vec3 vLocalPos;
 
 out vec4 FragColor;
 
@@ -14,6 +16,7 @@ uniform vec3 uLanternPos;
 uniform vec3 uLanternDir;
 uniform float uLanternCutoff;
 uniform bool uLanternOn;
+uniform vec3 uTint;
 
 // Procedural noise for dissolve
 float hash(vec2 p) {
@@ -56,14 +59,27 @@ void main() {
         }
     }
 
-    // Spectral color palette: calm cyan/white vs enraged bloody crimson
-    vec3 calmColor = vec3(0.55, 0.82, 0.95);
+    // Spectral colour: each ghost has its own cold tint; agitation drives it toward blood red
     vec3 enrageColor = vec3(0.95, 0.15, 0.12);
-    vec3 ghostColor = mix(calmColor, enrageColor, uAgitation);
+    vec3 ghostColor = mix(uTint, enrageColor, uAgitation);
 
-    // Rim glow and core translucency
-    vec3 finalColor = ghostColor * (lanternLight + fresnel * 1.4);
-    float alpha = clamp(0.35 + fresnel * 0.65 - uDissolve, 0.0, 1.0);
+    // Vertex colour carries the design: near-black parts are holes (eyes, mouths), saturated parts glow (ribbon, keys)
+    float lum = dot(vColor.rgb, vec3(0.333));
+    float sat = max(vColor.r, max(vColor.g, vColor.b)) - min(vColor.r, min(vColor.g, vColor.b));
+
+    // Drifting mist: slow noise eats into the silhouette and makes the surface crawl
+    float mist = noise(vLocalPos.xz * 7.0 + vec2(vLocalPos.y * 4.0 - uTime * 0.9, uTime * 0.4));
+    float footFade = smoothstep(0.05, 0.75, vLocalPos.y);       // robes dissolve into vapour at the floor
+    float breath = 0.85 + 0.15 * sin(uTime * 2.3);
+
+    vec3 body = ghostColor * (0.30 + lanternLight + fresnel * 1.5) * breath * (0.25 + 0.75 * lum);
+    vec3 finalColor = mix(body, vColor.rgb * (1.1 + lanternLight), clamp(sat * 1.6, 0.0, 0.85));
+    finalColor += ghostColor * pow(fresnel, 1.5) * 0.4;
+
+    float alpha = clamp(0.50 + fresnel * 0.5, 0.0, 1.0) * mix(0.18, 1.0, footFade) * (0.70 + 0.30 * mist);
+    alpha = mix(alpha, 0.96, clamp(sat * 1.5, 0.0, 1.0));       // glowing details stay solid
+    alpha *= 1.0 - 0.85 * smoothstep(0.7, 1.0, uDissolve);
+    alpha = clamp(alpha - uDissolve * 0.35, 0.0, 1.0);
 
     FragColor = vec4(finalColor, alpha);
 }

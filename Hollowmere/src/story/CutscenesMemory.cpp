@@ -3,7 +3,6 @@
 #include "CutsceneKit.h"
 #include "audio/AudioEngine.h"
 #include "audio/CineSfx.h"
-#include "audio/Synth2.h"
 #include <QLinearGradient>
 #include <QPainterPath>
 #include <QRadialGradient>
@@ -203,7 +202,7 @@ std::unique_ptr<Cinematic> makeMemoryCinematic(int sigil, AudioEngine* audio) {
             {Speaker::Ada,      U("I only wanted my mama.")},
             {Speaker::Nora,     U("I heard her through the vents. I told myself it was the wind.")},
         };
-        s.onEnter = [&B](Cinematic& c) { bed(c, BedRain, B.rain, 0.30f, 1.5f); bed(c, BedBox, B.boxWarped, 0.35f, 1.5f); bed(c, BedPad, B.padLow, 0.3f, 2.0f); };
+        s.onEnter = [&B](Cinematic& c) { music(c, "music_library", 0.55f, 2.0f); bed(c, BedRain, B.rain, 0.06f, 1.5f); bed(c, BedBox, B.boxWarped, 0.25f, 1.5f); };
         break;
     case 2:
         s.id = "memory-garden";
@@ -214,7 +213,7 @@ std::unique_ptr<Cinematic> makeMemoryCinematic(int sigil, AudioEngine* audio) {
             {Speaker::Nora,     U("Every flowerbed has a name pushed into the soil. These are graves.")},
             {Speaker::Crane,    U("A PLANT MUST BE CUT DOWN TO BEAR FRUIT.")},
         };
-        s.onEnter = [&B](Cinematic& c) { bed(c, BedExtra, B.graveyard, 0.5f, 1.5f); bed(c, BedPad, B.padTense, 0.28f, 2.0f); };
+        s.onEnter = [&B](Cinematic& c) { music(c, "music_garden", 0.55f, 2.0f); bed(c, BedExtra, B.graveyard, 0.25f, 1.5f); };
         s.onLine = [&B](Cinematic& c, int i) { if (i >= 1) sfx(c, B.clock, 0.25f); };
         break;
     case 3:
@@ -227,9 +226,8 @@ std::unique_ptr<Cinematic> makeMemoryCinematic(int sigil, AudioEngine* audio) {
             {Speaker::Crane,    U("HARMONY IS OBEDIENCE.")},
         };
         s.onEnter = [](Cinematic& c) {
-            bed(c, BedExtra, cinesfx::Bank::get().padTense, 0.4f, 1.5f);
-            static const std::vector<int16_t> chord = [] { return Synth2::generateChoirChord(false, 5.0f); }();
-            sfx(c, chord, 0.5f);
+            music(c, "music_cellar", 0.6f, 2.0f);
+            if (const AudioClip* v = AssetAudio::instance().find("pd_voices")) if (c.audio()) c.audio()->playClip(v, 0.45f);
         };
         s.onLine = [&B](Cinematic& c, int i) { if (i == 3) { sfx(c, B.impact, 0.5f); c.shake(0.5f); } };
         break;
@@ -243,7 +241,7 @@ std::unique_ptr<Cinematic> makeMemoryCinematic(int sigil, AudioEngine* audio) {
             {Speaker::Nora,     U("I locked it. I was nine. I ran, and I have not stopped running since.")},
             {Speaker::Nora,     U("I'm so sorry, Eli. I'm going back for you.")},
         };
-        s.onEnter = [&B](Cinematic& c) { bed(c, BedFire, B.fire, 0.45f, 1.5f); bed(c, BedPad, B.padTense, 0.3f, 2.0f); };
+        s.onEnter = [&B](Cinematic& c) { music(c, "music_nursery", 0.55f, 2.0f); bed(c, BedFire, B.fire, 0.35f, 1.5f); };
         s.onLine = [&B](Cinematic& c, int i) { if (i == 2) sfx(c, B.knock, 0.9f); if (i == 3) { sfx(c, B.lock, 1.0f); sfx(c, B.thud, 0.8f); c.shake(0.8f); } };
         break;
     }

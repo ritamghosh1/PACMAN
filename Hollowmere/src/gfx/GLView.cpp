@@ -9,6 +9,7 @@
 #include <QFile>
 #include <QKeyEvent>
 #include <QMouseEvent>
+#include <QWheelEvent>
 #include <QStandardPaths>
 #include <cmath>
 
@@ -28,7 +29,8 @@ GLView::GLView(QWidget* parent)
     setMouseTracking(true);
 
     m_settings.loadFromFile();
-    cinesfx::Bank::prewarm();   // render all cutscene sounds on a worker thread while the menu is up
+    cinesfx::Bank::prewarm();
+    AssetAudio::instance().preload();   // decode the downloaded recordings on a worker thread   // render all cutscene sounds on a worker thread while the menu is up
 
     connect(&m_frameTimer, &QTimer::timeout, this, [this]() { update(); });
     m_frameTimer.start(8);
@@ -76,6 +78,7 @@ void GLView::openStory() {
 void GLView::startStoryMovie(bool intro, int ending) {
     m_world.audio().stopBed(104, 1.0f);
     m_world.audio().stopBed(105, 1.0f);
+    m_world.audio().stopBed(210, 1.0f);
     m_cinematic = intro ? makeIntroCinematic(&m_world.audio()) : makeEndingCinematic(static_cast<EndingType>(ending), &m_world.audio());
     m_cinematic->start();
     m_returnToStory = true;
@@ -113,10 +116,15 @@ void GLView::applyQuality() {
 }
 
 void GLView::startMenuAmbience() {
-    if (m_menuAmbienceOn || !cinesfx::Bank::ready()) return;
-    const auto& b = cinesfx::Bank::get();
-    m_world.audio().startBed(104, b.wind, 0.30f, 3.0f);
-    m_world.audio().startBed(105, b.padLow, 0.32f, 4.0f);
+    auto& assets = AssetAudio::instance();
+    if (m_menuAmbienceOn || !cinesfx::Bank::ready() || assets.state() == AssetAudio::State::Loading) return;
+    if (const AudioClip* theme = assets.find("music_menu")) {
+        m_world.audio().startClipBed(210, theme, 0.6f, 3.0f);   // the real title theme
+    } else {
+        const auto& b = cinesfx::Bank::get();
+        m_world.audio().startBed(104, b.wind, 0.30f, 3.0f);
+        m_world.audio().startBed(105, b.padLow, 0.32f, 4.0f);
+    }
     m_menuAmbienceOn = true;
 }
 
@@ -129,10 +137,12 @@ void GLView::setGameState(GameState state) {
         if (state == GameState::Menu) m_cinematic.reset();
         if (prev != GameState::Menu) m_menuAmbienceOn = false;   // re-arm so the beds restart
         m_world.audio().setGameplayMuted(false);
+        if (prev == GameState::Playing || prev == GameState::Paused) m_world.audio().stopGameplayMusic();
     }
     if (state == GameState::Playing && prev != GameState::Paused) {
         m_world.audio().stopBed(104, 2.0f);
         m_world.audio().stopBed(105, 2.0f);
+        m_world.audio().stopBed(210, 2.0f);
         m_menuAmbienceOn = false;
     }
     Input::instance().update();
@@ -176,6 +186,7 @@ void GLView::startNewGame() {
     m_world.audio().playUi(1);
     m_world.audio().stopBed(104, 1.5f);
     m_world.audio().stopBed(105, 1.5f);
+    m_world.audio().stopBed(210, 1.5f);
     m_cinematic = makeIntroCinematic(&m_world.audio());
     m_cinematic->start();
     m_cinematicIsEnding = false;
@@ -561,6 +572,11 @@ void GLView::mousePressEvent(QMouseEvent* event) {
 
 void GLView::mouseReleaseEvent(QMouseEvent* event) {
     Input::instance().onMouseButtonReleased(event->button());
+    event->accept();
+}
+
+void GLView::wheelEvent(QWheelEvent* event) {
+    if (m_state == GameState::Story) m_storyBrowser.onWheel(event->angleDelta().y());
     event->accept();
 }
 

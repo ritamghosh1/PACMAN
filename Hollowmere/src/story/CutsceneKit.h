@@ -23,6 +23,12 @@ inline void bed(Cinematic& c, BedTag tag, const std::vector<int16_t>& s, float v
 inline void bedStop(Cinematic& c, BedTag tag, float fade = 1.5f) { if (c.audio()) c.audio()->stopBed(tag, fade); }
 inline void bedVol(Cinematic& c, BedTag tag, float vol, float ramp = 1.0f) { if (c.audio()) c.audio()->setBedVolume(tag, vol, ramp); }
 
+// Background music from the recordings (tag 210 is the cinematic music channel). Silent if assets are missing.
+inline void music(Cinematic& c, const char* name, float vol, float fade = 3.0f) {
+    if (!c.audio()) return;
+    if (const AudioClip* clip = AssetAudio::instance().find(name)) c.audio()->startClipBed(210, clip, vol, fade);
+}
+inline void musicStop(Cinematic& c, float fade = 2.0f) { if (c.audio()) c.audio()->stopBed(210, fade); }
 inline QString U(const char* s) { return QString::fromUtf8(s); }
 inline void fillAll(QPainter& p, const QColor& c) { p.fillRect(QRectF(-200, -200, W + 400, H + 400), c); }
 
