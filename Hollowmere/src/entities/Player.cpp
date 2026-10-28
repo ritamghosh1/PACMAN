@@ -227,7 +227,8 @@ void Player::handleInteraction(Collision& collision, std::vector<Door>& doors, s
     }
     if (bestDoor) {
         Door& door = *bestDoor;
-        if (door.isLocked()) m_currentPrompt = hasKey(door.keyId()) ? QString("[E] Unlock door (%1)").arg(Door::keyName(door.keyId())) : QString("[E] Locked - needs the %1").arg(Door::keyName(door.keyId()));
+        if (door.isLocked() && door.isInsideSide(m_position)) m_currentPrompt = "[E] Unlatch door";
+        else if (door.isLocked()) m_currentPrompt = hasKey(door.keyId()) ? QString("[E] Unlock door (%1)").arg(Door::keyName(door.keyId())) : QString("[E] Locked - needs the %1").arg(Door::keyName(door.keyId()));
         else m_currentPrompt = door.isOpen() ? "[E] Close door" : "[E] Open door";
         if (pressed && door.isOpen() && distance(Vec3(m_position.x, 0, m_position.z), Vec3(door.position().x, 0, door.position().z)) < 1.5f) {
             m_notificationToast = "You're standing in the doorway.";
@@ -235,7 +236,7 @@ void Player::handleInteraction(Collision& collision, std::vector<Door>& doors, s
         } else if (pressed) {
             QString msg;
             bool wasLocked = door.isLocked();
-            if (door.tryInteract(m_keyFlags, msg)) {
+            if (door.tryInteract(m_keyFlags, msg, door.isInsideSide(m_position))) {
                 collision.setColliderEnabled(door.id(), !door.isOpen());
                 m_doorEvents.push_back({wasLocked ? DoorEvent::Unlocked : (door.isOpen() ? DoorEvent::Opened : DoorEvent::Closed), door.position(), door.keyId()});
             } else {

@@ -24,9 +24,12 @@ void Door::update(float dt) {
     if (std::fabs(m_targetAngle - m_currentAngle) < 0.2f) m_currentAngle = m_targetAngle;
 }
 
-bool Door::tryInteract(int playerKeyFlags, QString& messageOut) {
+bool Door::tryInteract(int playerKeyFlags, QString& messageOut, bool fromInside) {
     if (m_isLocked) {
-        if (m_keyId != 0 && (playerKeyFlags & (1 << m_keyId))) {
+        if (fromInside) {
+            m_isLocked = false;
+            messageOut = "You slide the latch from this side.";
+        } else if (m_keyId != 0 && (playerKeyFlags & (1 << m_keyId))) {
             m_isLocked = false;
             messageOut = QString("Unlocked with the %1.").arg(keyName(m_keyId));
         } else {

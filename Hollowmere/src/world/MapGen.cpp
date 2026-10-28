@@ -290,6 +290,7 @@ bool MapGen::generateManor(QOpenGLFunctions_3_3_Core* gl, MapData& out) {
                 for (const auto& d : doorDefs) if (d.c == c && d.r == r) { key = d.key; wingId = d.wing; }
                 bool spansX = !isFloor(c - 1, r) && !isFloor(c + 1, r);   // passage runs north-south
                 Door door(doorCounter++, Vec3(x, 0, z), spansX, key, CELL);
+                door.setInnerPoint(out.cellCenter(entranceCell[wingId][0], entranceCell[wingId][1]));
                 out.wings[wingId].doorId = door.id();
                 out.doors.push_back(door);
                 out.collision.addBox(door.currentColliderBox(), 1, door.id());

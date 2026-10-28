@@ -13,7 +13,10 @@ public:
 
     void update(float dt);
 
-    bool tryInteract(int playerKeyFlags, QString& messageOut);
+    bool tryInteract(int playerKeyFlags, QString& messageOut, bool fromInside = false);
+    // The wing side of the door: a locked door can always be unlatched from there.
+    void setInnerPoint(const Vec3& p) { m_inner = p; }
+    bool isInsideSide(const Vec3& p) const { return dot(p - m_position, m_inner - m_position) > 0.0f; }
     void forceOpen();
 
     int id() const { return m_id; }
@@ -42,6 +45,7 @@ private:
     bool m_isLocked = false;
     int m_keyId = 0;
     float m_width;
+    Vec3 m_inner;
 
     float m_currentAngle = 0.0f;
     float m_targetAngle = 0.0f;
