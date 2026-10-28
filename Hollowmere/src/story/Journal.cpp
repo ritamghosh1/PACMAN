@@ -33,7 +33,7 @@ std::string Journal::getCurrentObjectiveHint(int currentWing) const {
         case 1: return "LIBRARY: Ada weeps here. Creep (C), or hold H beside her to hum the lullaby.";
         case 2: return "CONSERVATORY: Mr. Pell freezes while your lantern lights him. Keep him in view.";
         case 3: return "CELLAR: the Choir is blind. Walk, don't run; hold breath (SHIFT+C) when close.";
-        case 4: return "NURSERY: Eli wants a game. Close your eyes (CTRL) near him, then open them.";
+        case 4: return "NURSERY: Eli wants a game. Close your eyes (X) near him, then open them.";
         case 5: return "CHAPEL: bring all four sigils to the altar. Run from the Warden.";
         default: return "Survive the corridors and keep your lantern burning.";
     }

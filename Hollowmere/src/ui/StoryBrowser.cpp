@@ -77,7 +77,7 @@ StoryBrowser::StoryBrowser() {
          "  Ada the Weeper: creep (C) past her, burn her with the focused lantern (right mouse), or hold H and click on the beat to hum her lullaby.\n"
          "  Mr. Pell, the Hollow Man: he only moves when unseen. Keep your lantern on him.\n"
          "  The Choir: blind. Walk, never run; hold your breath (SHIFT+C).\n"
-         "  Eli the Doll: close your eyes (CTRL) while he is near, then open them: peek-a-boo.\n"
+         "  Eli the Doll: close your eyes (X) while he is near, then open them: peek-a-boo.\n"
          "  The Warden: runs once you hold three sigils. Sprint (SHIFT) or stun him with the focused lantern.\n\n"
          "Candle-lit rooms (the foyer and each wing entrance) are safe.\n\n"
          "SANITY (blue bar): darkness, ghosts and listening drain it; candlelight, a lit lantern and humming restore it. As it falls the colour drains, you see shadows, hear whispers and footsteps that are not there, and eventually see ghosts that are not real. It never kills you directly: it makes the house lie to you.\n\n"
@@ -145,7 +145,7 @@ StoryBrowser::StoryBrowser() {
          "Eli was Nora's brother. He suffered night terrors and Dr. Crane gave him a porcelain mask to wear \"to calm him,\" which also kept his eyes shut. On the last night he was strapped into the cellar chair, crying silently.\n\n"
          "He called Nora's name through the ward door. She locked it. Since then Eli has been playing the last game he remembers, hide-and-seek. He counts, he hides, he giggles, he appears behind you. He is not hunting you; he wants you to find him.\n\n"
          "He still carries his blanket. The fourth sigil is the blanket.",
-         "AVOID: keep your lantern on. He is most dangerous in the dark.\nOUTSMART: shine the lantern on him to stun him briefly.\nMERCY: close your eyes with CTRL while he is near, then open them. Peek-a-boo. Do not hurt him: harming him changes the ending.",
+         "AVOID: keep your lantern on. He is most dangerous in the dark.\nOUTSMART: shine the lantern on him to stun him briefly.\nMERCY: close your eyes with X while he is near, then open them. Peek-a-boo. Do not hurt him: harming him changes the ending.",
          "A toy-piano plink and a child's breathy laughter, over the Hush, Little Light melody played out of tune."},
         {"DR. CRANE", "The Warden", "Silas Crane, fused with the burnt ward door.",
          "Dr. Silas Crane built the Quiet Programme. He died in the fire when Nora locked the door; his body fused with the charred ward door and the chains used to restrain children. What walks the house now is a burnt iron shape with a ring of keys.\n\n"

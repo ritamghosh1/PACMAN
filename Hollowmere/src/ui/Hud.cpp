@@ -335,7 +335,7 @@ void Hud::drawControls(QPainter& p, int x, int y) {
     float a = m_sessionTime < 32.0f ? 1.0f : (40.0f - m_sessionTime) / 8.0f;
     p.setPen(QColor(210, 200, 185, static_cast<int>(200 * a)));
     p.setFont(serif(14, false, true));
-    static const char* lines[] = {"W A S D  move      Mouse  look", "SHIFT  run      C  creep      F  lantern", "E / click  use      TAB  journal      M  map", "H  hum      CTRL  close eyes      ESC  pause"};
+    static const char* lines[] = {"W A S D  move      Mouse  look", "SHIFT  run      C  creep      F  lantern", "E / click  use      TAB  journal      M  map", "H  hum      X  close eyes      ESC  pause"};
     for (int i = 0; i < 4; ++i) p.drawText(x, y + i * 20, lines[i]);
 }
 

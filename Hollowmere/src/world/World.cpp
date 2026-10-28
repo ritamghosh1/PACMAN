@@ -150,7 +150,7 @@ void World::onWingEntered(int wing) {
     case 4:
         queueStory(Speaker::Nora, "Eli's nursery. Please, not here.");
         queueStory(Speaker::Eli, "Peek-a-boo… ready or not.");
-        queueStory(Speaker::Manor, "Eli only wants the game. Hold CTRL to close your eyes while he is near, then open them. Do not hurt him.");
+        queueStory(Speaker::Manor, "Eli only wants the game. Hold X (Ctrl or Cmd also work) to close your eyes while he is near, then open them. Do not hurt him.");
         break;
     case 5:
         queueStory(Speaker::Nora, "Mae? Mae, are you here?");
@@ -400,7 +400,7 @@ void World::update(float dt) {
     for (auto& door : m_mapData.doors) door.update(dt);
     for (auto& pickup : m_mapData.pickups) pickup.update(dt);
 
-    bool eyesClosed = input.isKeyDown(Qt::Key_Control);
+    bool eyesClosed = input.isKeyDown(Qt::Key_Control) || input.isKeyDown(Qt::Key_X) || input.isKeyDown(Qt::Key_Meta);
     bool isListening = input.isKeyDown(Qt::Key_Alt);
     bool isHumming = input.isKeyDown(Qt::Key_H);
     bool isHoldingBreath = (input.isKeyDown(Qt::Key_Shift) && input.isKeyDown(Qt::Key_C));

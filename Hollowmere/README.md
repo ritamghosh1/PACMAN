@@ -26,7 +26,7 @@ In the winter of 1925, Nora returns to the decaying ruins of **Hollowmere Manor 
 | **F** | Lantern Toggle | Toggles kerosene spotlight. Essential for navigating darkness |
 | **RMB** | Focus Lantern | Concentrates beam into high-intensity cone (burns Ada / stuns Dr. Crane) |
 | **Alt** | Listen Verb | High-cut lowpass filter; visually ripples in the direction of ghost sounds |
-| **Ctrl** | Blink / Close Eyes | Shuts eyes (darkens screen); Hollow Man only moves when unobserved |
+| **X** (or Ctrl) | Blink / Close Eyes | Shuts eyes (darkens screen); Hollow Man only moves when unobserved |
 | **Shift + C** | Hold Breath | Muffles breathing sound; required to evade The Choir |
 | **H** | Hum / Mercy | Hold near Ada (the Weeper) to hum "Hush Little Light" and calm her |
 | **M** | Minimap | Toggles the fog-of-war map (gold marker = current objective) |
