@@ -84,6 +84,7 @@ private:
     DialogueBox m_dialogue;
     StoryBrowser m_storyBrowser;
     bool m_returnToStory = false;
+    bool m_devKeys = qEnvironmentVariableIsSet("HOLLOWMERE_DEV");   // F3/F5-F8 test aids
 
     std::unique_ptr<Cinematic> m_cinematic;
     bool m_cinematicIsEnding = false;

@@ -413,11 +413,11 @@ void GLView::keyPressEvent(QKeyEvent* event) {
         if (key == Qt::Key_I) { m_inventoryOpen = !m_inventoryOpen; return; }
         if (key == Qt::Key_M) { m_hud.toggleMap(); return; }
         if (key >= Qt::Key_1 && key <= Qt::Key_6) { m_inventoryOverlay.selectSlot(key - Qt::Key_1); return; }
-        if (key == Qt::Key_F3) { m_debugConsole.toggleDebugOverlay(); return; }
-        if (key == Qt::Key_F5) { m_debugConsole.giveAllItems(m_world); return; }
-        if (key == Qt::Key_F6) { m_debugConsole.teleportToObjective(m_world); return; }
-        if (key == Qt::Key_F8) { m_debugConsole.summonGhosts(m_world); return; }
-        if (key == Qt::Key_F7) { m_debugConsole.unlockAllDoors(m_world); return; }
+        if (key == Qt::Key_F3 && m_devKeys) { m_debugConsole.toggleDebugOverlay(); return; }
+        if (key == Qt::Key_F5 && m_devKeys) { m_debugConsole.giveAllItems(m_world); return; }
+        if (key == Qt::Key_F6 && m_devKeys) { m_debugConsole.teleportToObjective(m_world); return; }
+        if (key == Qt::Key_F8 && m_devKeys) { m_debugConsole.summonGhosts(m_world); return; }
+        if (key == Qt::Key_F7 && m_devKeys) { m_debugConsole.unlockAllDoors(m_world); return; }
         if (m_journalOpen) {
             if (key == Qt::Key_Up) { m_journalOverlay.prevNote(); return; }
             if (key == Qt::Key_Down) { m_journalOverlay.nextNote(); return; }

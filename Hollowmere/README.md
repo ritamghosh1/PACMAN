@@ -34,7 +34,7 @@ In the winter of 1925, Nora returns to the decaying ruins of **Hollowmere Manor 
 | **1 – 6** | Inventory Hotkeys | Selects items (Matches, Bandages, Kerosene, Throwable Bottles) |
 | **Tab** | Field Journal | Opens parchment journal with 40 lore notes, wing filters, and hints |
 | **Esc** | Pause / Settings | Opens Pause menu, settings dialog, or closes journal |
-| **F3 / F5 / F6 / F7 / F8** | Debug | F3 stats, F5 give all items, F6 teleport to objective, F7 open all doors, F8 summon ghosts |
+| **F3 / F5 / F6 / F7 / F8** | Debug (only with env `HOLLOWMERE_DEV=1`) | F3 stats, F5 give all items, F6 teleport to objective, F7 open all doors, F8 summon ghosts |
 
 ---
 

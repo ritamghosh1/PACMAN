@@ -172,7 +172,7 @@ void World::handlePickupEvents() {
         switch (ev.type) {
         case PickupType::MemorySigil: {
             m_pendingMemory = std::clamp(ev.tag, 1, 4);   // GLView plays the animated flashback for this sigil
-            if (m_player.sigilCount() >= 3 && !m_wardenActive) {
+            if (m_player.sigilCount() >= 4 && !m_wardenActive) {
                 m_wardenActive = true;
                 m_ghosts[4]->resetToHome(m_mapData.wardenSpawn);
                 queueStory(Speaker::Crane, "YOU HAVE TAKEN WHAT IS MINE, MISS HALE.");
@@ -240,16 +240,27 @@ void World::updateAltar() {
 void World::updateObjective() {
     ObjectiveInfo o;
     o.total = static_cast<int>(m_mapData.questOrder.size());
+    // The objective is the first uncollected item the player can actually reach right now:
+    // its wing is the foyer, the player is already inside it, or its door stands open.
+    // If nothing is reachable the marker points at the door that blocks the quest order.
     const Pickup* next = nullptr;
+    const Pickup* firstMissing = nullptr;
+    const int here = m_mapData.wingAt(m_player.position());
     for (int id : m_mapData.questOrder) {
         const Pickup* p = m_mapData.findPickup(id);
-        if (p && p->isCollected()) o.collected++;
-        else if (p && !next) next = p;
+        if (!p) continue;
+        if (p->isCollected()) { o.collected++; continue; }
+        if (!firstMissing) firstMissing = p;
+        if (next) continue;
+        int w = m_mapData.wingAt(p->position());
+        const Door* d = w > 0 ? m_mapData.findDoor(m_mapData.wings[w].doorId) : nullptr;
+        if (!d || d->isOpen() || here == w) next = p;
     }
+    if (!next) next = firstMissing;
     if (next) {
         int wing = m_mapData.wingAt(next->position());
         const Door* door = wing > 0 ? m_mapData.findDoor(m_mapData.wings[wing].doorId) : nullptr;
-        if (door && !door->isOpen()) {
+        if (door && !door->isOpen() && here != wing) {
             o.target = door->position();
             o.hasTarget = true;
             if (door->isLocked()) {
