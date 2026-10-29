@@ -27,3 +27,5 @@ missing, Hollowmere falls back to its built-in procedural sounds.
 | `pd_*` | `SFX/Room/PocketDimension/` | the Choir's whispering voices, screech, rumble |
 | `warden_*` | `SFX/SCP/173`, `SFX/SCP/049` | stone drag, rattles, breathing |
 | `wood_*`, `glass_break`, `body_fall`, `pick*` | `SFX/Door`, `SFX/General`, `SFX/Interact` | doors and pickups |
+| `step_*`, `run_*` | `SFX/Step/` (Step1-8, Run1-8) | Nora's walking and running footsteps |
+| `breath_*` | `SFX/Character/D9341/` (breath0-4) | Nora's laboured breathing when stamina is low |

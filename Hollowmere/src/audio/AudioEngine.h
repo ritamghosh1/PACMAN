@@ -165,6 +165,7 @@ private:
     int m_tickCounter = 0;
     bool m_gameplayMuted = false;
     float m_bodyAudioTimer = 0.0f;
+    float m_breathCooldown = 0.0f;
     float m_musicTimer = 0.0f;
 };
 

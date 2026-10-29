@@ -238,6 +238,20 @@ void AudioEngine::update(float dt, const Vec3& listenerPos, float listenerYawDeg
         }
     }
 
+    // Winded: real breathing recordings, louder and more frequent the lower the stamina
+    m_breathCooldown -= dt;
+    float winded = clamp((0.55f - m_staminaNow) / 0.55f, 0.0f, 1.0f);
+    float scared = clamp((m_fearNow - 0.6f) / 0.4f, 0.0f, 1.0f) * 0.5f;
+    float need = std::max(winded, scared);
+    if (need > 0.05f && m_breathCooldown <= 0.0f) {
+        if (const AudioClip* c = AssetAudio::instance().pick("breath_")) {
+            playClip(c, 0.30f + 0.65f * need, 0.0f);
+            m_breathCooldown = std::max(0.4f, c->seconds * (1.15f - 0.5f * need));
+        } else {
+            m_breathCooldown = 1.0f;
+        }
+    }
+
     // Periodically feed body heartbeat & breath
     m_bodyAudioTimer += dt;
     if (m_bodyAudioTimer >= 0.8f) {
@@ -247,12 +261,6 @@ void AudioEngine::update(float dt, const Vec3& listenerPos, float listenerYawDeg
         auto heart = m_bodyAudio.renderHeartbeatChunk(0.8f);
         playSound(heart, 0.0f, heartVol, false);
 
-        float breathVol = 0.30f * (1.0f - m_staminaNow) + 0.08f * m_fearNow;
-        if (breathVol > 0.03f) {
-            auto breath = m_bodyAudio.renderBreathingChunk(0.8f);
-            playSound(breath, 0.0f, breathVol, false);
-        }
-
         if (m_bodyAudio.isTinnitusActive()) {
             auto tin = m_bodyAudio.renderTinnitusChunk(0.8f);
             playSound(tin, 0.0f, 0.40f, false);
@@ -261,6 +269,12 @@ void AudioEngine::update(float dt, const Vec3& listenerPos, float listenerYawDeg
 }
 
 void AudioEngine::playFootstep(FootstepSurface surface, bool isRightFoot, bool isSprinting, bool isCrouching) {
+    // Real recordings when available: shoes on stone for walking, heavier ones for running
+    if (const AudioClip* c = AssetAudio::instance().pick(isSprinting ? "run_" : "step_")) {
+        float vol = isSprinting ? 0.62f : (isCrouching ? 0.20f : 0.42f);
+        playClip(c, vol, isRightFoot ? 0.15f : -0.15f);
+        return;
+    }
     auto step = m_bodyAudio.generateFootstep(surface, isRightFoot, isSprinting, isCrouching);
     playSound(step, isRightFoot ? 0.15f : -0.15f, 0.42f);
 }
